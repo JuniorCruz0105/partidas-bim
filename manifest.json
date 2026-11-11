@@ -1,0 +1,7 @@
+{
+  "url": "https://JuniorCruz0105.github.io/partidas-bim/index.html",
+  "title": "Partidas BIM",
+  "icon": "https://JuniorCruz0105.github.io/partidas-bim/icon.svg",
+  "description": "Prototipo: asigna partidas de presupuesto a los elementos del modelo y calcula mediciones e importes.",
+  "extensionType": ["3dviewer"]
+}
