@@ -217,7 +217,7 @@
   const PREFERIDAS = /volume|volumen|area|área|length|longitud|height|altura|width|ancho|thickness|espesor|depth|perimeter|perímetro|weight|peso|xdim|ydim|zdim/i;
   const ordenar = arr => arr.sort((a, b) => (PREFERIDAS.test(a) ? 0 : 1) - (PREFERIDAS.test(b) ? 0 : 1) || a.localeCompare(b));
   const fmt = (n, d = 2) => Number(n || 0).toLocaleString("es-DO", { minimumFractionDigits: d, maximumFractionDigits: d });
-  const esc = s => String(s ?? "").replace(/[&<>\"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
   const norm = s => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
   const leerFactor = t => { const v = parseFloat(String(t).replace(",", ".")); return isFinite(v) && v > 0 ? v : 1; };
   const redondear = v => Math.round(v * 100) / 100;   // igual que ROUND(...,2) del Excel
@@ -704,6 +704,7 @@
     }).join("");
     $("tablaCub").innerHTML = `<div class="scroll" style="max-height:420px"><table><tr><th>Partida</th><th class="num">Ud</th><th class="num">Período</th><th class="num">A origen</th></tr>${html || '<tr><td colspan="4" class="muted">Sin partidas que mostrar. Marca «Mostrar todas» o liga elementos en Presupuesto.</td></tr>'}
       <tr class="total"><td colspan="2">Total (importe)</td><td class="num">${fmt(impO - impA)}</td><td class="num">${fmt(impO)}</td></tr></table></div>` + (filas.length > 600 ? `<p class="muted">Mostrando 600 filas; usa el filtro.</p>` : "");
+    // registros
     const regs = datos.registros.filter(r => r.cub === c.num);
     const agrup = {}; regs.filter(r => r.tipo === "elem").forEach(r => { const k = r.partida + "|" + r.valor; (agrup[k] ||= { partida: r.partida, valor: r.valor, n: 0 }).n++; });
     $("cubRegistros").innerHTML = (regs.length ? `<table>${Object.values(agrup).map(g => `<tr><td>${esc(g.partida)}</td><td>${g.n} elementos al ${fmt(g.valor, 0)} %</td><td></td></tr>`).join("")}
@@ -743,7 +744,7 @@
   // ---------- Acciones de presupuesto ----------
   $("btnAsignar").onclick = () => {
     const p = partidaDesdeTexto($("buscaPartida").value);
-    if (!p) return alert("Elige una partida del presupuesto (código o parte del texto).);
+    if (!p) return alert("Elige una partida del presupuesto (código o parte del texto).");
     if (!seleccion.length) return alert("Selecciona elementos en el visor.");
     for (const s of seleccion) { const e = registrar(s); if (!e.partidas.includes(p.codigo)) e.partidas.push(p.codigo); }
     partidaActiva = p.codigo; guardar(); pintarTodo(); estado(`${seleccion.length} elementos → ${p.codigo}`);
