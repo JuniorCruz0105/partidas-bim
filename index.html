@@ -5,30 +5,40 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Partidas BIM</title>
 <style>
-  :root { --bg:#fff; --fg:#1d2433; --muted:#6b7280; --line:#e5e7eb; --acc:#0063a3; --acc2:#e8f1f8; --bad:#b42318; }
+  :root { --fg:#1d2433; --muted:#6b7280; --line:#e5e7eb; --acc:#0063a3; --cap:#dbeafe; --sub:#dcfce7; --bad:#b42318; --ok:#067647; }
   * { box-sizing: border-box; }
-  body { margin:0; font:13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--fg); background:var(--bg); }
-  header { padding:10px 12px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+  body { margin:0; font:13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--fg); background:#fff; }
+  header { padding:10px 12px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:8px; }
   header b { font-size:14px; }
-  #estado { color:var(--muted); font-size:12px; }
+  #estado { color:var(--muted); font-size:12px; text-align:right; }
   section { padding:10px 12px; border-bottom:1px solid var(--line); }
   h3 { margin:0 0 8px; font-size:13px; }
   .row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
-  input, select, textarea { font:inherit; padding:5px 6px; border:1px solid var(--line); border-radius:4px; }
+  input, select, textarea { font:inherit; padding:5px 6px; border:1px solid var(--line); border-radius:4px; max-width:100%; }
   textarea { width:100%; min-height:70px; }
-  button { font:inherit; padding:5px 9px; border:1px solid var(--acc); background:var(--acc); color:#fff; border-radius:4px; cursor:pointer; }
-  button.sec { background:#fff; color:var(--acc); }
-  button.mini { padding:2px 6px; font-size:12px; }
-  button:disabled { opacity:.5; cursor:default; }
+  button, .boton { font:inherit; padding:5px 9px; border:1px solid var(--acc); background:var(--acc); color:#fff; border-radius:4px; cursor:pointer; display:inline-block; }
+  button.sec, .boton.sec { background:#fff; color:var(--acc); }
+  button.mini { padding:1px 6px; font-size:11px; }
   table { width:100%; border-collapse:collapse; font-size:12px; }
   th, td { text-align:left; padding:4px; border-bottom:1px solid var(--line); vertical-align:top; }
   td.num, th.num { text-align:right; white-space:nowrap; }
+  tr.cap1 td { background:var(--cap); font-weight:600; }
+  tr.cap2 td { background:var(--sub); font-weight:600; }
+  tr.partida { cursor:pointer; }
+  tr.partida:hover td { background:#f8fafc; }
+  tr.activa td { outline:2px solid var(--acc); outline-offset:-2px; }
   .muted { color:var(--muted); }
   .bad { color:var(--bad); }
-  .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:middle; }
-  .total { font-weight:600; }
+  .ok { color:var(--ok); }
+  .sw { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:4px; vertical-align:middle; }
+  .total td { font-weight:700; border-top:2px solid var(--fg); }
   details summary { cursor:pointer; color:var(--acc); margin:4px 0; }
-  .scroll { max-height:220px; overflow:auto; }
+  .scroll { max-height:240px; overflow:auto; }
+  .kpi { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+  .kpi div { flex:1; min-width:110px; background:#f8fafc; border:1px solid var(--line); border-radius:6px; padding:6px 8px; }
+  .kpi small { display:block; color:var(--muted); font-size:11px; }
+  .kpi b { font-size:14px; }
+  .herr { margin-top:3px; display:flex; gap:4px; flex-wrap:wrap; align-items:center; }
 </style>
 </head>
 <body>
@@ -38,7 +48,10 @@
   <h3>Selección en el modelo</h3>
   <div id="selResumen" class="muted">Selecciona elementos en el visor.</div>
   <div class="row" style="margin-top:6px">
-    <select id="selPartida"></select>
+    <input id="buscaPartida" list="listaPartidas" placeholder="Partida: código o texto" style="flex:1;min-width:160px">
+    <datalist id="listaPartidas"></datalist>
+  </div>
+  <div class="row">
     <button id="btnAsignar">Asignar a selección</button>
     <button id="btnQuitar" class="sec">Quitar partida</button>
   </div>
@@ -46,7 +59,12 @@
 </section>
 
 <section>
-  <h3>Partidas</h3>
+  <h3 id="tituloObra">Presupuesto</h3>
+  <div id="kpis"></div>
+  <div class="row">
+    <input id="filtro" placeholder="Filtrar partidas" style="flex:1;min-width:120px">
+    <label class="muted"><input type="checkbox" id="soloAsignadas"> Solo con elementos</label>
+  </div>
   <div id="tablaPartidas"></div>
   <div class="row" style="margin-top:8px">
     <button id="btnColorTodo" class="sec">Colorear por partida</button>
@@ -56,21 +74,15 @@
 </section>
 
 <section>
-  <h3>Nueva partida</h3>
+  <h3>Cargar presupuesto</h3>
+  <p class="muted" style="margin:0 0 6px">Formato Cayacoa: Partida · Código · Nat · Ud · Resumen · Cantidad · P.U. · Total (hoja «Presupuesto»).</p>
   <div class="row">
-    <input id="pCodigo" placeholder="Código" size="8">
-    <input id="pDesc" placeholder="Descripción" style="flex:1;min-width:140px">
+    <label class="boton">Cargar Excel (.xlsx)<input id="fileXLSX" type="file" accept=".xlsx,.xlsm,.xls" hidden></label>
   </div>
-  <div class="row">
-    <input id="pUnidad" placeholder="Unidad (m³, m², ml, ud)" size="10">
-    <input id="pPrecio" placeholder="Precio unitario" size="10" inputmode="decimal">
-    <select id="pCantidad" title="Con qué cantidad del modelo se mide"></select>
-    <button id="btnNueva">Añadir</button>
-  </div>
-  <details><summary>Pegar partidas desde Excel</summary>
-    <p class="muted">Columnas: Código · Descripción · Unidad · Precio (copia las filas en Excel y pégalas aquí).</p>
+  <details><summary>O pegar desde Excel</summary>
+    <p class="muted">Copia en Excel desde la fila de encabezados (Partida, Código, Nat…) hasta el final y pégalo aquí.</p>
     <textarea id="pegar"></textarea>
-    <div class="row"><button id="btnPegar" class="sec">Cargar partidas</button></div>
+    <div class="row"><button id="btnPegar" class="sec">Cargar lo pegado</button></div>
   </details>
 </section>
 
@@ -79,7 +91,7 @@
   <div class="row">
     <button id="btnCSV" class="sec">Exportar CSV para SharePoint</button>
     <button id="btnJSON" class="sec">Guardar respaldo</button>
-    <label class="sec" style="cursor:pointer;color:var(--acc)">Cargar respaldo <input id="fileJSON" type="file" accept=".json" hidden></label>
+    <label class="boton sec">Cargar respaldo<input id="fileJSON" type="file" accept=".json" hidden></label>
   </div>
   <p class="muted" style="margin:4px 0 0">Prototipo: los datos se guardan en este navegador. En la fase siguiente irán a SharePoint.</p>
 </section>
@@ -89,21 +101,33 @@
 (async () => {
   const $ = id => document.getElementById(id);
   const PALETA = ["#e6194b","#3cb44b","#4363d8","#f58231","#911eb4","#46f0f0","#f032e6","#bcf60c","#008080","#9a6324","#800000","#808000","#000075","#fabebe","#aaffc3"];
-  const CONTAR = "__contar";
+  const CONTAR = "__contar", AUTO = "__auto";
+  const IGNORAR = /origin|dir[xyz]|^[xyz]$|(^|[^a-z])id$|globalid|guid|tag|elevation|elevación|rotation|angle/i;
+  const PREFERIDAS = /volume|volumen|area|área|length|longitud|height|altura|width|ancho|thickness|espesor|depth|perimeter|perímetro|weight|peso|xdim|ydim|zdim/i;
+  const ordenar = arr => arr.sort((a, b) => (PREFERIDAS.test(a) ? 0 : 1) - (PREFERIDAS.test(b) ? 0 : 1) || a.localeCompare(b));
   const fmt = (n, d = 2) => Number(n || 0).toLocaleString("es-DO", { minimumFractionDigits: d, maximumFractionDigits: d });
-  const esc = s => String(s ?? "").replace(/[&<>\"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c]));
+  const esc = s => String(s ?? "").replace(/[&<>\"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+  const norm = s => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+  const leerFactor = t => { const v = parseFloat(String(t).replace(",", ".")); return isFinite(v) && v > 0 ? v : 1; };
+  const redondear = v => Math.round(v * 100) / 100;   // igual que ROUND(...,2) del Excel
+  const num = v => typeof v === "number" ? v : (parseFloat(String(v ?? "").replace(/[$\s,]/g, "")) || 0);
 
   let API, claveDatos = "partidas-bim";
-  let datos = { partidas: [], elementos: {} };   // elementos: { guid: {modelId, guid, clase, nombre, cantidades:{}, partidas:[] } }
-  let seleccion = [];                            // [{modelId, guid, runtimeId, clase, nombre, cantidades}]
+  // obra: {codigo, descripcion}; capitulos: [{codigo, ref, descripcion, padre}]; partidas: [{codigo, ref, descripcion, unidad, precio, cantPres, padre, cantidad, factor}]
+  // elementos: { guid: {modelId, guid, clase, nombre, cantidades:{}, partidas:[codigo]} }
+  let datos = { obra: null, capitulos: [], partidas: [], elementos: {} };
+  let seleccion = [];
+  let partidaActiva = null;
 
   const estado = t => $("estado").textContent = t;
   function guardar() { try { localStorage.setItem(claveDatos, JSON.stringify(datos)); } catch (e) { estado("No se pudo guardar en el navegador"); } }
-  function cargar() { try { const t = localStorage.getItem(claveDatos); if (t) datos = JSON.parse(t); } catch (e) {} }
+  function cargar() {
+    try { const t = localStorage.getItem(claveDatos); if (t) datos = Object.assign({ obra: null, capitulos: [], partidas: [], elementos: {} }, JSON.parse(t)); } catch (e) {}
+  }
 
   // ---------- Conexión ----------
   try {
-    API = await TrimbleConnectWorkspace.connect(window.parent, (evento, args) => {
+    API = await TrimbleConnectWorkspace.connect(window.parent, (evento) => {
       if (evento === "viewer.onSelectionChanged") leerSeleccion();
     }, 30000);
     const proyecto = await API.project.getProject();
@@ -122,7 +146,7 @@
     for (const pset of p.properties || []) {
       for (const pr of pset.properties || []) {
         const v = typeof pr.value === "number" ? pr.value : (typeof pr.value === "string" && /^-?\d+([.,]\d+)?$/.test(pr.value.trim()) ? parseFloat(pr.value.replace(",", ".")) : null);
-        if (v !== null && isFinite(v) && !(pr.name in out)) out[pr.name] = v;
+        if (v !== null && isFinite(v) && !IGNORAR.test(pr.name) && !(pr.name in out)) out[pr.name] = v;
       }
     }
     return out;
@@ -140,34 +164,124 @@
         let guids;
         try { guids = await API.viewer.convertToObjectIds(grupo.modelId, ids); } catch (e) { guids = ids.map(String); }
         props.forEach((p, i) => lista.push({
-          modelId: grupo.modelId,
-          runtimeId: ids[i],
-          guid: guids[i] || String(ids[i]),
-          clase: p.class || "",
-          nombre: p.product?.name || p.name || "",
-          cantidades: extraerCantidades(p)
+          modelId: grupo.modelId, runtimeId: ids[i], guid: guids[i] || String(ids[i]),
+          clase: p.class || "", nombre: p.product?.name || p.name || "", cantidades: extraerCantidades(p)
         }));
       }
       seleccion = lista;
-    } catch (e) {
-      seleccion = [];
-      estado("Error leyendo la selección");
-    }
+    } catch (e) { seleccion = []; estado("Error leyendo la selección"); }
     pintarSeleccion();
-    pintarOpcionesCantidad();
   }
+
+  // ---------- Presupuesto: importación formato Cayacoa ----------
+  function interpretarFilas(filas) {
+    // filas: array de arrays de celdas. Busca la fila de encabezados.
+    const iHead = filas.findIndex(f => { const n = f.map(norm); return n.includes("partida") && n.includes("nat") && n.includes("ud"); });
+    if (iHead < 0) throw new Error("No encuentro la fila de encabezados (Partida, Código, Nat, Ud, Resumen, Cantidad, P.U., Total).");
+    const h = filas[iHead].map(norm);
+    const col = nombres => h.findIndex(x => nombres.includes(x));
+    const c = { partida: col(["partida"]), codigo: col(["codigo"]), nat: col(["nat"]), ud: col(["ud"]), resumen: col(["resumen"]),
+                cantidad: col(["cantidad"]), pu: col(["p.u.", "pu", "p.u", "precio"]), total: col(["total"]) };
+    if (c.partida < 0 || c.nat < 0 || c.resumen < 0) throw new Error("Faltan columnas obligatorias (Partida, Nat, Resumen).");
+    const res = { obra: null, capitulos: [], partidas: [], avisos: [] };
+    const usados = new Set();
+    const padreDe = id => { id = id.replace(/ \(\d+\)$/, ""); return id.includes("-") ? id.slice(0, id.lastIndexOf("-")) : null; };
+    for (const f of filas.slice(iHead + 1)) {
+      let id = String(f[c.partida] ?? "").trim();
+      const nat = norm(f[c.nat]);
+      if (!id || !nat) continue;                    // subtotales, vacías, TOTAL GENERAL
+      if (usados.has(id)) {
+        let k = 2; while (usados.has(`${id} (${k})`)) k++;
+        res.avisos.push(`El código ${id} está repetido en el Excel («${String(f[c.resumen] ?? "").trim()}»). Se cargó como ${id} (${k}); conviene corregirlo en el Excel.`);
+        id = `${id} (${k})`;
+      }
+      usados.add(id);
+      const base = { codigo: id, ref: String(f[c.codigo] ?? "").trim(), descripcion: String(f[c.resumen] ?? "").trim() };
+      if (nat === "obra") res.obra = base;
+      else if (nat.startsWith("capitulo")) res.capitulos.push({ ...base, padre: padreDe(id) });
+      else if (nat === "partida") res.partidas.push({ ...base, padre: padreDe(id), unidad: String(f[c.ud] ?? "").trim().toUpperCase(),
+        cantPres: num(f[c.cantidad]), precio: num(f[c.pu]), cantidad: AUTO, factor: 1 });
+    }
+    if (!res.partidas.length) throw new Error("No encontré filas con Nat = «Partida».");
+    return res;
+  }
+
+  function aplicarPresupuesto(res) {
+    const tenia = datos.partidas.length;
+    if (tenia && !confirm(`Se va a sustituir el presupuesto actual (${tenia} partidas) por el nuevo (${res.partidas.length} partidas). Las asignaciones de partidas que sigan existiendo se conservan. ¿Continuar?`)) return;
+    const anteriores = Object.fromEntries(datos.partidas.map(p => [p.codigo, p]));
+    res.partidas.forEach(p => { const a = anteriores[p.codigo]; if (a) { p.cantidad = a.cantidad; p.factor = a.factor; } });
+    const validos = new Set(res.partidas.map(p => p.codigo));
+    let huerfanas = 0;
+    for (const e of Object.values(datos.elementos)) {
+      const antes = e.partidas.length;
+      e.partidas = e.partidas.filter(c => validos.has(c));
+      huerfanas += antes - e.partidas.length;
+      if (!e.partidas.length) delete datos.elementos[e.guid];
+    }
+    datos.obra = res.obra; datos.capitulos = res.capitulos; datos.partidas = res.partidas; datos.avisos = res.avisos;
+    guardar(); pintarTodo();
+    estado(`${res.partidas.length} partidas en ${res.capitulos.length} capítulos` + (huerfanas ? ` · ${huerfanas} asignaciones quitadas` : ""));
+    if (res.avisos.length) alert("Revisa el presupuesto:\n\n" + res.avisos.join("\n\n"));
+  }
+
+  async function cargarSheetJS() {
+    if (window.XLSX) return;
+    await new Promise((ok, mal) => {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      s.onload = ok; s.onerror = () => mal(new Error("No se pudo cargar el lector de Excel."));
+      document.head.appendChild(s);
+    });
+  }
+
+  $("fileXLSX").onchange = async ev => {
+    const f = ev.target.files[0]; if (!f) return;
+    try {
+      estado("Leyendo Excel…");
+      await cargarSheetJS();
+      const libro = XLSX.read(await f.arrayBuffer(), { type: "array" });
+      const nombre = libro.SheetNames.find(n => norm(n) === "presupuesto") || libro.SheetNames[0];
+      const filas = XLSX.utils.sheet_to_json(libro.Sheets[nombre], { header: 1, raw: true, defval: "" });
+      aplicarPresupuesto(interpretarFilas(filas));
+    } catch (e) { alert(e.message || "No se pudo leer el archivo."); estado("Error al leer el Excel"); }
+    ev.target.value = "";
+  };
+
+  $("btnPegar").onclick = () => {
+    try {
+      const filas = $("pegar").value.split(/\r?\n/).map(l => l.split("\t"));
+      aplicarPresupuesto(interpretarFilas(filas));
+      $("pegar").value = "";
+    } catch (e) { alert(e.message); }
+  };
 
   // ---------- Cálculos ----------
   function elementosDe(codigo) { return Object.values(datos.elementos).filter(e => e.partidas.includes(codigo)); }
-  function medir(partida) {
-    const els = elementosDe(partida.codigo);
+
+  function claveAuto(unidad, cantidades) {
+    const u = norm(unidad), k = Object.keys(cantidades);
+    const busca = (...re) => { for (const r of re) { const x = k.find(n => r.test(n)); if (x) return x; } return null; };
+    if (u === "m3") return busca(/^netvolume$/i, /volume|volumen/i);
+    if (u === "m2") return busca(/^netarea$/i, /netsidearea/i, /area|área/i);
+    if (u === "m" || u === "ml") return busca(/^length$/i, /length|longitud/i);
+    if (u === "p2") return busca(/area|área/i);
+    if (u === "kg") return busca(/weight|peso|mass/i);
+    return CONTAR;                                         // U, UD, PA y otras: contar
+  }
+
+  function claveDe(p, e) { return p.cantidad === AUTO ? claveAuto(p.unidad, e.cantidades) : p.cantidad; }
+
+  function medir(p) {
+    const els = elementosDe(p.codigo);
     let cantidad = 0, faltan = 0;
     for (const e of els) {
-      if (partida.cantidad === CONTAR) cantidad += 1;
-      else if (partida.cantidad in e.cantidades) cantidad += e.cantidades[partida.cantidad];
+      const k = claveDe(p, e);
+      if (k === CONTAR) cantidad += 1;
+      else if (k && k in e.cantidades) cantidad += e.cantidades[k] * (p.factor ?? 1);
       else faltan++;
     }
-    return { n: els.length, cantidad, faltan, importe: cantidad * (partida.precio || 0) };
+    return { n: els.length, cantidad, faltan, importe: redondear(cantidad * (p.precio || 0)), importePres: redondear((p.cantPres || 0) * (p.precio || 0)) };
   }
 
   async function selectorDe(elementos) {
@@ -184,12 +298,18 @@
   }
 
   // ---------- Pintado ----------
-  function pintarTodo() { pintarSelectPartidas(); pintarPartidas(); pintarSeleccion(); pintarOpcionesCantidad(); }
+  function pintarTodo() { pintarListaPartidas(); pintarPartidas(); pintarSeleccion(); }
 
-  function pintarSelectPartidas() {
-    $("selPartida").innerHTML = datos.partidas.length
-      ? datos.partidas.map(p => `<option value="${esc(p.codigo)}">${esc(p.codigo)} · ${esc(p.descripcion).slice(0, 40)}</option>`).join("")
-      : '<option value="">(crea una partida primero)</option>';
+  function etiqueta(p) { return `${p.codigo} · ${p.descripcion}`; }
+  function partidaDesdeTexto(t) {
+    t = String(t).trim(); if (!t) return null;
+    const cod = t.split(" · ")[0].trim();
+    return datos.partidas.find(p => p.codigo === cod) || datos.partidas.find(p => p.ref === cod) ||
+      datos.partidas.find(p => norm(p.descripcion).includes(norm(t)));
+  }
+
+  function pintarListaPartidas() {
+    $("listaPartidas").innerHTML = datos.partidas.map(p => `<option value="${esc(etiqueta(p))}">${esc(p.unidad)}</option>`).join("");
   }
 
   function pintarSeleccion() {
@@ -199,120 +319,135 @@
     const conPartida = seleccion.filter(e => datos.elementos[e.guid]?.partidas.length).length;
     $("selResumen").innerHTML = `<b>${seleccion.length}</b> elementos · ${Object.entries(clases).map(([c, n]) => `${esc(c)} (${n})`).join(", ")}<br><span class="muted">${conPartida} ya tienen partida</span>`;
     const filas = seleccion.slice(0, 300).map(e => {
-      const asig = datos.elementos[e.guid]?.partidas.join(", ") || '<span class="muted">—</span>';
-      const cant = Object.entries(e.cantidades).slice(0, 6).map(([k, v]) => `${esc(k)}: ${fmt(v, 3)}`).join("<br>");
+      const asig = datos.elementos[e.guid]?.partidas.join("<br>") || '<span class="muted">—</span>';
+      const cant = ordenar(Object.keys(e.cantidades)).map(k => `${PREFERIDAS.test(k) ? "<b>" + esc(k) + "</b>" : esc(k)}: ${fmt(e.cantidades[k], 3)}`).join("<br>");
       return `<tr><td>${esc(e.clase)}<br><span class="muted">${esc(e.nombre)}</span></td><td>${cant || '<span class="muted">sin cantidades</span>'}</td><td>${asig}</td></tr>`;
     }).join("");
     $("selTabla").innerHTML = `<table><tr><th>Elemento</th><th>Cantidades del modelo</th><th>Partidas</th></tr>${filas}</table>` +
       (seleccion.length > 300 ? `<p class="muted">Mostrando 300 de ${seleccion.length}.</p>` : "");
   }
 
-  function pintarOpcionesCantidad() {
+  function opcionesPara(p) {
     const nombres = new Set();
-    [...seleccion, ...Object.values(datos.elementos)].forEach(e => Object.keys(e.cantidades || {}).forEach(k => nombres.add(k)));
-    const preferidas = [...nombres].sort((a, b) => {
-      const q = s => /volume|area|length|volumen|área|longitud|perimeter|weight/i.test(s) ? 0 : 1;
-      return q(a) - q(b) || a.localeCompare(b);
-    });
-    const actual = $("pCantidad").value;
-    $("pCantidad").innerHTML = `<option value="${CONTAR}">Contar unidades</option>` + preferidas.map(n => `<option>${esc(n)}</option>`).join("");
-    if ([...$("pCantidad").options].some(o => o.value === actual)) $("pCantidad").value = actual;
+    elementosDe(p.codigo).forEach(e => Object.keys(e.cantidades).forEach(k => nombres.add(k)));
+    if (p.cantidad !== AUTO && p.cantidad !== CONTAR) nombres.add(p.cantidad);
+    const ops = [[AUTO, "Auto (según unidad)"], [CONTAR, "Contar unidades"], ...ordenar([...nombres]).map(n => [n, n])];
+    return ops.map(([v, t]) => `<option value="${esc(v)}" ${v === p.cantidad ? "selected" : ""}>${esc(t)}</option>`).join("");
   }
 
   function pintarPartidas() {
-    if (!datos.partidas.length) { $("tablaPartidas").innerHTML = '<p class="muted">Aún no hay partidas. Créalas abajo o pégalas desde Excel.</p>'; return; }
-    let total = 0;
-    const filas = datos.partidas.map((p, i) => {
-      const m = medir(p); total += m.importe;
-      const aviso = m.faltan ? `<br><span class="bad">${m.faltan} sin «${esc(p.cantidad)}»</span>` : "";
-      return `<tr>
-        <td><span class="sw" style="background:${PALETA[i % PALETA.length]}"></span><b>${esc(p.codigo)}</b><br>${esc(p.descripcion)}<br>
-          <select data-cant="${i}" class="mini">${opcionesPara(p)}</select></td>
-        <td class="num">${m.n} el.<br>${fmt(m.cantidad)} ${esc(p.unidad)}${aviso}</td>
-        <td class="num">${fmt(m.importe)}</td>
-        <td><button class="mini sec" data-acc="ver" data-i="${i}">Ver</button>
-            <button class="mini sec" data-acc="aislar" data-i="${i}">Aislar</button>
-            <button class="mini sec" data-acc="borrar" data-i="${i}" title="Eliminar partida">×</button></td></tr>`;
+    $("tituloObra").textContent = datos.obra ? `${datos.obra.codigo} · ${datos.obra.descripcion}` : "Presupuesto";
+    if (!datos.partidas.length) {
+      $("kpis").innerHTML = ""; $("tablaPartidas").innerHTML = '<p class="muted">Aún no hay presupuesto. Cárgalo abajo desde el Excel.</p>'; return;
+    }
+    // Totales
+    const medidas = Object.fromEntries(datos.partidas.map(p => [p.codigo, medir(p)]));
+    let totPres = 0, totModelo = 0, presCubierto = 0, nConElementos = 0;
+    for (const p of datos.partidas) {
+      const m = medidas[p.codigo];
+      totPres += m.importePres;
+      if (m.n) { nConElementos++; totModelo += m.importe; presCubierto += m.importePres; }
+    }
+    $("kpis").innerHTML = `<div class="kpi">
+      <div><small>Presupuesto</small><b>${fmt(totPres)}</b></div>
+      <div><small>Partidas ligadas al modelo</small><b>${nConElementos} / ${datos.partidas.length}</b></div>
+      <div><small>% del presupuesto ligado</small><b>${fmt(totPres ? presCubierto / totPres * 100 : 0, 1)} %</b></div>
+      <div><small>Importe medido en modelo</small><b>${fmt(totModelo)}</b><small>presup. de esas partidas: ${fmt(presCubierto)}</small></div></div>`;
+
+    // Árbol filtrado
+    const filtro = norm($("filtro").value), solo = $("soloAsignadas").checked;
+    const visibles = datos.partidas.filter(p => (!solo || medidas[p.codigo].n) &&
+      (!filtro || norm(p.codigo + " " + p.ref + " " + p.descripcion).includes(filtro)));
+    const capsVisibles = new Set();
+    visibles.forEach(p => { let c = p.padre; while (c) { capsVisibles.add(c); c = c.includes("-") ? c.slice(0, c.lastIndexOf("-")) : null; } });
+    const sumaCap = {};
+    for (const p of datos.partidas) {
+      let c = p.padre;
+      while (c) { (sumaCap[c] ||= { pres: 0, mod: 0 }); sumaCap[c].pres += medidas[p.codigo].importePres; sumaCap[c].mod += medidas[p.codigo].importe; c = c.includes("-") ? c.slice(0, c.lastIndexOf("-")) : null; }
+    }
+    const nivel = id => id.split("-").length - 1;
+    const filasCap = Object.fromEntries(datos.capitulos.map(c => [c.codigo, c]));
+    const orden = [...datos.capitulos.map(c => ({ tipo: "cap", ...c })), ...visibles.map(p => ({ tipo: "par", ...p }))]
+      .filter(x => x.tipo === "par" || capsVisibles.has(x.codigo))
+      .sort((a, b) => a.codigo.localeCompare(b.codigo, "es", { numeric: true }) || (a.tipo === "cap" ? -1 : 1));
+    const indice = Object.fromEntries(datos.partidas.map((p, i) => [p.codigo, i]));
+
+    const html = orden.slice(0, 600).map(x => {
+      if (x.tipo === "cap") {
+        const s = sumaCap[x.codigo] || { pres: 0, mod: 0 };
+        return `<tr class="${nivel(x.codigo) <= 1 ? "cap1" : "cap2"}"><td colspan="2">${esc(x.ref)} ${esc(x.descripcion)}</td><td class="num">${fmt(s.pres)}</td><td class="num">${s.mod ? fmt(s.mod) : ""}</td></tr>`;
+      }
+      const p = x, i = indice[p.codigo], m = medidas[p.codigo];
+      const dif = m.n && p.cantPres ? (m.cantidad - p.cantPres) / p.cantPres * 100 : null;
+      const difTxt = dif === null ? "" : `<br><span class="${Math.abs(dif) > 10 ? "bad" : "ok"}">${dif > 0 ? "+" : ""}${fmt(dif, 1)} %</span>`;
+      const aviso = m.faltan ? `<br><span class="bad">${m.faltan} sin cantidad</span>` : "";
+      const herr = m.n || partidaActiva === p.codigo ? `<div class="herr">
+          <select data-cant="${i}" class="mini" title="Con qué cantidad se mide">${opcionesPara(p)}</select>
+          ${p.cantidad === CONTAR ? "" : `× <input data-factor="${i}" class="mini" size="5" value="${p.factor ?? 1}" title="Factor: mm→m 0.001 · mm²→m² 0.000001 · mm³→m³ 0.000000001">`}
+          ${m.n ? `<button class="mini sec" data-acc="ver" data-i="${i}">Ver</button><button class="mini sec" data-acc="aislar" data-i="${i}">Aislar</button>` : ""}</div>` : "";
+      return `<tr class="partida ${partidaActiva === p.codigo ? "activa" : ""}" data-cod="${esc(p.codigo)}">
+        <td><span class="sw" style="background:${m.n ? PALETA[i % PALETA.length] : "transparent"}"></span><b>${esc(p.codigo)}</b> <span class="muted">${esc(p.ref)}</span><br>${esc(p.descripcion)}${herr}</td>
+        <td class="num">${esc(p.unidad)}<br>P.U. ${fmt(p.precio)}</td>
+        <td class="num">${fmt(p.cantPres, 3)}<br>${fmt(m.importePres)}</td>
+        <td class="num">${m.n ? `${fmt(m.cantidad, 3)}<br>${fmt(m.importe)}<br><span class="muted">${m.n} el.</span>${difTxt}${aviso}` : '<span class="muted">—</span>'}</td></tr>`;
     }).join("");
-    $("tablaPartidas").innerHTML = `<div class="scroll" style="max-height:320px"><table>
-      <tr><th>Partida</th><th class="num">Medición</th><th class="num">Importe</th><th></th></tr>${filas}
-      <tr class="total"><td>Total</td><td></td><td class="num">${fmt(total)}</td><td></td></tr></table></div>`;
+    $("tablaPartidas").innerHTML = `<div class="scroll" style="max-height:420px"><table>
+      <tr><th>Partida</th><th class="num">Ud</th><th class="num">Presupuesto</th><th class="num">Modelo</th></tr>${html}
+      <tr class="total"><td colspan="2">Total</td><td class="num">${fmt(totPres)}</td><td class="num">${fmt(totModelo)}</td></tr></table></div>` +
+      (orden.length > 600 ? `<p class="muted">Mostrando 600 filas; usa el filtro.</p>` : "");
   }
 
-  function opcionesPara(p) {
-    const nombres = new Set([p.cantidad]);
-    elementosDe(p.codigo).forEach(e => Object.keys(e.cantidades).forEach(k => nombres.add(k)));
-    return [...nombres].map(n => `<option value="${esc(n)}" ${n === p.cantidad ? "selected" : ""}>${n === CONTAR ? "Contar unidades" : esc(n)}</option>`).join("");
-  }
+  $("filtro").oninput = pintarPartidas;
+  $("soloAsignadas").onchange = pintarPartidas;
 
   // ---------- Acciones ----------
-  $("btnNueva").onclick = () => {
-    const codigo = $("pCodigo").value.trim();
-    if (!codigo) return alert("Escribe un código.");
-    if (datos.partidas.some(p => p.codigo === codigo)) return alert("Ya existe una partida con ese código.");
-    datos.partidas.push({ codigo, descripcion: $("pDesc").value.trim(), unidad: $("pUnidad").value.trim(),
-      precio: parseFloat($("pPrecio").value.replace(/,/g, "")) || 0, cantidad: $("pCantidad").value || CONTAR });
-    ["pCodigo", "pDesc", "pUnidad", "pPrecio"].forEach(id => $(id).value = "");
-    guardar(); pintarTodo();
-  };
-
-  $("btnPegar").onclick = () => {
-    let n = 0;
-    for (const linea of $("pegar").value.split(/\r?\n/)) {
-      const c = linea.split("\t");
-      const codigo = (c[0] || "").trim();
-      if (!codigo || datos.partidas.some(p => p.codigo === codigo)) continue;
-      datos.partidas.push({ codigo, descripcion: (c[1] || "").trim(), unidad: (c[2] || "").trim(),
-        precio: parseFloat((c[3] || "").replace(/[^\d.\-]/g, "")) || 0, cantidad: CONTAR });
-      n++;
-    }
-    $("pegar").value = ""; guardar(); pintarTodo();
-    estado(`${n} partidas cargadas`);
-  };
-
   $("btnAsignar").onclick = () => {
-    const codigo = $("selPartida").value;
-    if (!codigo) return alert("Crea o elige una partida.");
+    const p = partidaDesdeTexto($("buscaPartida").value);
+    if (!p) return alert("Elige una partida del presupuesto (escribe su código o parte del texto).");
     if (!seleccion.length) return alert("Selecciona elementos en el visor.");
     for (const e of seleccion) {
       const reg = datos.elementos[e.guid] ||= { modelId: e.modelId, guid: e.guid, clase: e.clase, nombre: e.nombre, cantidades: e.cantidades, partidas: [] };
       reg.cantidades = e.cantidades;
-      if (!reg.partidas.includes(codigo)) reg.partidas.push(codigo);
+      if (!reg.partidas.includes(p.codigo)) reg.partidas.push(p.codigo);
     }
-    const p = datos.partidas.find(p => p.codigo === codigo);
-    if (p && p.cantidad === CONTAR && $("pCantidad").value !== CONTAR) { /* se deja como está; se cambia en la tabla */ }
+    partidaActiva = p.codigo;
     guardar(); pintarTodo();
-    estado(`${seleccion.length} elementos → ${codigo}`);
+    estado(`${seleccion.length} elementos → ${p.codigo}`);
   };
 
   $("btnQuitar").onclick = () => {
-    const codigo = $("selPartida").value;
+    const p = partidaDesdeTexto($("buscaPartida").value);
+    if (!p) return alert("Elige la partida que quieres quitar.");
     let n = 0;
     for (const e of seleccion) {
       const reg = datos.elementos[e.guid];
-      if (reg && reg.partidas.includes(codigo)) { reg.partidas = reg.partidas.filter(c => c !== codigo); n++; if (!reg.partidas.length) delete datos.elementos[e.guid]; }
+      if (reg && reg.partidas.includes(p.codigo)) { reg.partidas = reg.partidas.filter(c => c !== p.codigo); n++; if (!reg.partidas.length) delete datos.elementos[e.guid]; }
     }
     guardar(); pintarTodo();
-    estado(`${n} elementos quitados de ${codigo}`);
+    estado(`${n} elementos quitados de ${p.codigo}`);
   };
 
   $("tablaPartidas").addEventListener("change", ev => {
-    const i = ev.target.dataset.cant;
-    if (i === undefined) return;
-    datos.partidas[i].cantidad = ev.target.value;
+    const { cant, factor } = ev.target.dataset;
+    if (cant !== undefined) datos.partidas[cant].cantidad = ev.target.value;
+    else if (factor !== undefined) datos.partidas[factor].factor = leerFactor(ev.target.value);
+    else return;
     guardar(); pintarPartidas();
   });
 
   $("tablaPartidas").addEventListener("click", async ev => {
-    const b = ev.target.closest("button"); if (!b) return;
-    const p = datos.partidas[b.dataset.i];
-    if (b.dataset.acc === "borrar") {
-      if (!confirm(`¿Eliminar la partida ${p.codigo} y sus asignaciones?`)) return;
-      Object.values(datos.elementos).forEach(e => { e.partidas = e.partidas.filter(c => c !== p.codigo); if (!e.partidas.length) delete datos.elementos[e.guid]; });
-      datos.partidas.splice(b.dataset.i, 1);
-      guardar(); pintarTodo(); return;
+    if (ev.target.closest("select, input")) return;
+    const b = ev.target.closest("button");
+    if (!b) {
+      const fila = ev.target.closest("tr.partida");
+      if (fila) {
+        const p = datos.partidas.find(x => x.codigo === fila.dataset.cod);
+        partidaActiva = p.codigo; $("buscaPartida").value = etiqueta(p); pintarPartidas();
+      }
+      return;
     }
     if (!API) return;
+    const p = datos.partidas[b.dataset.i];
     const els = elementosDe(p.codigo);
     if (!els.length) return estado("Esa partida no tiene elementos");
     const selector = await selectorDe(els);
@@ -362,17 +497,21 @@
   const csvCelda = v => { const s = String(v ?? ""); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 
   $("btnCSV").onclick = () => {
-    const filas = [["Codigo", "Descripcion", "Unidad", "PrecioUnitario", "CantidadUsada", "GlobalId", "ClaseIFC", "NombreElemento", "ModeloId", "Cantidad", "Importe"]];
+    const cap = Object.fromEntries(datos.capitulos.map(c => [c.codigo, c]));
+    const filas = [["Obra", "Partida", "Codigo", "Capitulo", "Resumen", "Ud", "PU", "CantidadPresupuesto", "CantidadModeloUsada", "Factor", "GlobalId", "ClaseIFC", "NombreElemento", "ModeloId", "CantidadElemento", "ImporteElemento"]];
     for (const p of datos.partidas) {
       for (const e of elementosDe(p.codigo)) {
-        const q = p.cantidad === CONTAR ? 1 : (e.cantidades[p.cantidad] ?? "");
-        filas.push([p.codigo, p.descripcion, p.unidad, p.precio, p.cantidad === CONTAR ? "Unidades" : p.cantidad, e.guid, e.clase, e.nombre, e.modelId, q, q === "" ? "" : q * p.precio]);
+        const k = claveDe(p, e);
+        const f = k === CONTAR ? 1 : (p.factor ?? 1);
+        const q = k === CONTAR ? 1 : (k && k in e.cantidades ? e.cantidades[k] * f : "");
+        filas.push([datos.obra?.codigo || "", p.codigo, p.ref, cap[p.padre]?.descripcion || "", p.descripcion, p.unidad, p.precio, p.cantPres,
+          k === CONTAR ? "Unidades" : (k || ""), f, e.guid, e.clase, e.nombre, e.modelId, q, q === "" ? "" : q * p.precio]);
       }
     }
-    descargar("partidas-elementos.csv", "\ufeff" + filas.map(f => f.map(csvCelda).join(";")).join("\r\n"), "text/csv;charset=utf-8");
+    descargar(`partidas-elementos-${datos.obra?.codigo || "obra"}.csv`, "﻿" + filas.map(f => f.map(csvCelda).join(";")).join("\r\n"), "text/csv;charset=utf-8");
   };
 
-  $("btnJSON").onclick = () => descargar("partidas-bim-respaldo.json", JSON.stringify(datos, null, 1), "application/json");
+  $("btnJSON").onclick = () => descargar(`partidas-bim-respaldo-${datos.obra?.codigo || "obra"}.json`, JSON.stringify(datos, null, 1), "application/json");
 
   $("fileJSON").onchange = async ev => {
     const f = ev.target.files[0]; if (!f) return;
@@ -380,7 +519,8 @@
       const d = JSON.parse(await f.text());
       if (!Array.isArray(d.partidas) || typeof d.elementos !== "object") throw 0;
       if (!confirm("Esto sustituye los datos actuales por los del respaldo. ¿Continuar?")) return;
-      datos = d; guardar(); pintarTodo(); estado("Respaldo cargado");
+      datos = Object.assign({ obra: null, capitulos: [], partidas: [], elementos: {} }, d);
+      guardar(); pintarTodo(); estado("Respaldo cargado");
     } catch (e) { alert("El archivo no es un respaldo válido."); }
     ev.target.value = "";
   };
