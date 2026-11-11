@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Partidas BIM</title>
 <style>
-  :root { --fg:#1d2433; --muted:#6b7280; --line:#e5e7eb; --acc:#0063a3; --cap:#dbeafe; --sub:#dcfce7; --bad:#b42318; --ok:#067647; }
+  :root { --fg:#1d2433; --muted:#6b7280; --line:#e5e7eb; --acc:#0063a3; --cap:#dbeafe; --sub:#dcfce7; --bad:#b42318; --ok:#067647; --warn:#b54708; }
   * { box-sizing: border-box; }
   body { margin:0; font:13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--fg); background:#fff; }
   header { padding:10px 12px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:8px; }
@@ -13,32 +13,40 @@
   #estado { color:var(--muted); font-size:12px; text-align:right; }
   section { padding:10px 12px; border-bottom:1px solid var(--line); }
   h3 { margin:0 0 8px; font-size:13px; }
+  h4 { margin:10px 0 6px; font-size:12px; }
   .row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
   input, select, textarea { font:inherit; padding:5px 6px; border:1px solid var(--line); border-radius:4px; max-width:100%; }
   textarea { width:100%; min-height:70px; }
   button, .boton { font:inherit; padding:5px 9px; border:1px solid var(--acc); background:var(--acc); color:#fff; border-radius:4px; cursor:pointer; display:inline-block; }
   button.sec, .boton.sec { background:#fff; color:var(--acc); }
   button.mini { padding:1px 6px; font-size:11px; }
+  button:disabled { opacity:.45; cursor:default; }
   table { width:100%; border-collapse:collapse; font-size:12px; }
   th, td { text-align:left; padding:4px; border-bottom:1px solid var(--line); vertical-align:top; }
   td.num, th.num { text-align:right; white-space:nowrap; }
   tr.cap1 td { background:var(--cap); font-weight:600; }
   tr.cap2 td { background:var(--sub); font-weight:600; }
-  tr.partida { cursor:pointer; }
-  tr.partida:hover td { background:#f8fafc; }
+  tr.clic { cursor:pointer; }
+  tr.clic:hover td { background:#f8fafc; }
   tr.activa td { outline:2px solid var(--acc); outline-offset:-2px; }
-  .muted { color:var(--muted); }
-  .bad { color:var(--bad); }
-  .ok { color:var(--ok); }
+  .muted { color:var(--muted); } .bad { color:var(--bad); } .ok { color:var(--ok); } .warn { color:var(--warn); }
   .sw { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:4px; vertical-align:middle; }
   .total td { font-weight:700; border-top:2px solid var(--fg); }
   details summary { cursor:pointer; color:var(--acc); margin:4px 0; }
   .scroll { max-height:240px; overflow:auto; }
-  .kpi { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+  .kpi { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
   .kpi div { flex:1; min-width:110px; background:#f8fafc; border:1px solid var(--line); border-radius:6px; padding:6px 8px; }
   .kpi small { display:block; color:var(--muted); font-size:11px; }
   .kpi b { font-size:14px; }
   .herr { margin-top:3px; display:flex; gap:4px; flex-wrap:wrap; align-items:center; }
+  .tabs { display:flex; border-bottom:1px solid var(--line); position:sticky; top:0; background:#fff; z-index:2; }
+  .tabs button { flex:1; border:0; border-bottom:3px solid transparent; border-radius:0; background:#fff; color:var(--muted); padding:8px 4px; font-weight:600; }
+  .tabs button.on { color:var(--acc); border-bottom-color:var(--acc); }
+  .pestana { display:none; } .pestana.on { display:block; }
+  .barra { height:6px; background:var(--line); border-radius:3px; overflow:hidden; margin-top:2px; }
+  .barra i { display:block; height:100%; background:var(--ok); }
+  .leyenda span { margin-right:10px; white-space:nowrap; font-size:11px; }
+  input[type=range] { width:100%; padding:0; }
 </style>
 </head>
 <body>
@@ -51,14 +59,22 @@
     <input id="buscaPartida" list="listaPartidas" placeholder="Partida: código o texto" style="flex:1;min-width:160px">
     <datalist id="listaPartidas"></datalist>
   </div>
-  <div class="row">
-    <button id="btnAsignar">Asignar a selección</button>
-    <button id="btnQuitar" class="sec">Quitar partida</button>
-  </div>
   <details><summary>Ver elementos seleccionados</summary><div id="selTabla" class="scroll"></div></details>
 </section>
 
+<nav class="tabs">
+  <button data-tab="pres" class="on">Presupuesto</button>
+  <button data-tab="cub">Cubicación</button>
+  <button data-tab="cro">Cronograma</button>
+</nav>
+
+<!-- ===================== PRESUPUESTO ===================== -->
+<div class="pestana on" id="tab-pres">
 <section>
+  <div class="row">
+    <button id="btnAsignar">Asignar partida a selección</button>
+    <button id="btnQuitar" class="sec">Quitar partida</button>
+  </div>
   <h3 id="tituloObra">Presupuesto</h3>
   <div id="kpis"></div>
   <div class="row">
@@ -69,38 +85,133 @@
   <div class="row" style="margin-top:8px">
     <button id="btnColorTodo" class="sec">Colorear por partida</button>
     <button id="btnSinPartida" class="sec">Ver sin partida</button>
-    <button id="btnReset" class="sec">Restablecer vista</button>
+    <button class="sec btnReset">Restablecer vista</button>
   </div>
 </section>
-
 <section>
   <h3>Cargar presupuesto</h3>
   <p class="muted" style="margin:0 0 6px">Formato Cayacoa: Partida · Código · Nat · Ud · Resumen · Cantidad · P.U. · Total (hoja «Presupuesto»).</p>
-  <div class="row">
-    <label class="boton">Cargar Excel (.xlsx)<input id="fileXLSX" type="file" accept=".xlsx,.xlsm,.xls" hidden></label>
-  </div>
+  <div class="row"><label class="boton">Cargar Excel (.xlsx)<input id="fileXLSX" type="file" accept=".xlsx,.xlsm,.xls" hidden></label></div>
   <details><summary>O pegar desde Excel</summary>
-    <p class="muted">Copia en Excel desde la fila de encabezados (Partida, Código, Nat…) hasta el final y pégalo aquí.</p>
-    <textarea id="pegar"></textarea>
+    <textarea id="pegar" placeholder="Copia desde la fila de encabezados hasta el final"></textarea>
     <div class="row"><button id="btnPegar" class="sec">Cargar lo pegado</button></div>
   </details>
 </section>
+</div>
+
+<!-- ===================== CUBICACIÓN ===================== -->
+<div class="pestana" id="tab-cub">
+<section>
+  <h3>Cubicaciones</h3>
+  <div class="row">
+    <select id="cubSel" style="flex:1;min-width:160px"></select>
+    <button id="btnCerrarCub" class="sec">Cerrar</button>
+  </div>
+  <div class="row">
+    <input type="date" id="cubFecha" title="Fecha de corte">
+    <button id="btnNuevaCub" class="sec">Nueva cubicación</button>
+  </div>
+  <div id="cubAviso" class="muted"></div>
+
+  <h4>Avance de los elementos seleccionados</h4>
+  <div class="row">
+    <select id="cubAlcance">
+      <option value="todas">En todas sus partidas</option>
+      <option value="una">Solo en la partida elegida arriba</option>
+    </select>
+  </div>
+  <div class="row">
+    <button class="btnPct" data-pct="100">100 %</button>
+    <button class="btnPct sec" data-pct="50">50 %</button>
+    <input id="cubPct" size="5" placeholder="%" inputmode="decimal">
+    <button id="btnPctAplicar" class="sec">Aplicar %</button>
+    <button class="btnPct sec" data-pct="0" title="Volver a 0 %">0 %</button>
+  </div>
+  <p class="muted" style="margin:0">El % es el avance <b>a origen</b> de cada elemento. La app calcula la cantidad en la unidad de la partida.</p>
+
+  <h4>Cantidad manual (partidas sin modelo)</h4>
+  <div class="row">
+    <input id="cubCant" size="9" placeholder="Cantidad" inputmode="decimal">
+    <span id="cubUd" class="muted"></span>
+    <button id="btnCantManual" class="sec">Añadir a la partida elegida</button>
+  </div>
+</section>
+<section>
+  <div id="cubKpis"></div>
+  <div class="row">
+    <input id="cubFiltro" placeholder="Filtrar partidas" style="flex:1;min-width:120px">
+    <label class="muted"><input type="checkbox" id="cubTodas"> Mostrar todas</label>
+  </div>
+  <div id="tablaCub"></div>
+  <div class="row" style="margin-top:8px">
+    <button id="btnColorAvance" class="sec">Colorear por avance</button>
+    <button class="sec btnReset">Restablecer vista</button>
+    <button id="btnCubCSV" class="sec">Exportar cubicación (CSV)</button>
+  </div>
+  <div class="leyenda muted"><span><i class="sw" style="background:#2e7d32"></i>Completo</span><span><i class="sw" style="background:#f59e0b"></i>Parcial</span><span><i class="sw" style="background:#cbd5e1"></i>Sin avance</span></div>
+  <details><summary>Registros de esta cubicación</summary><div id="cubRegistros" class="scroll"></div></details>
+</section>
+</div>
+
+<!-- ===================== CRONOGRAMA ===================== -->
+<div class="pestana" id="tab-cro">
+<section>
+  <h3 id="croTitulo">Cronograma</h3>
+  <div class="row">
+    <label class="boton sec">Cargar cronograma (.json / .csv)<input id="fileCro" type="file" accept=".json,.csv,.txt" hidden></label>
+  </div>
+  <div id="croAviso" class="muted"></div>
+</section>
+<section>
+  <h3>Secuencia constructiva</h3>
+  <div class="row">
+    <input type="date" id="croFecha">
+    <select id="croModo">
+      <option value="plan">Planificado</option>
+      <option value="real">Planificado vs cubicado</option>
+    </select>
+    <label class="muted"><input type="checkbox" id="croOcultar"> Ocultar lo no iniciado</label>
+  </div>
+  <input type="range" id="croSlider" min="0" max="100" value="0">
+  <div class="row" style="margin-top:6px">
+    <button id="btnCroVer">Ver a esta fecha</button>
+    <button id="btnCroPlay" class="sec">▶ Reproducir</button>
+    <button class="sec btnReset">Restablecer vista</button>
+  </div>
+  <div id="croLeyenda" class="leyenda muted"></div>
+</section>
+<section>
+  <h3>Tareas</h3>
+  <div class="row">
+    <button id="btnTareaAsignar" disabled>Asignar selección a la tarea</button>
+    <button id="btnTareaQuitar" class="sec" disabled>Quitar</button>
+  </div>
+  <div id="tareaActivaTxt" class="muted" style="margin-bottom:6px">Haz clic en una tarea para elegirla.</div>
+  <div class="row">
+    <input id="croFiltro" placeholder="Filtrar tareas" style="flex:1;min-width:120px">
+    <label class="muted"><input type="checkbox" id="croSoloLigadas"> Solo con elementos</label>
+  </div>
+  <div id="tablaCro"></div>
+</section>
+</div>
 
 <section>
   <h3>Datos</h3>
   <div class="row">
-    <button id="btnCSV" class="sec">Exportar CSV para SharePoint</button>
+    <button id="btnCSV" class="sec">Exportar vínculos (CSV)</button>
     <button id="btnJSON" class="sec">Guardar respaldo</button>
     <label class="boton sec">Cargar respaldo<input id="fileJSON" type="file" accept=".json" hidden></label>
   </div>
-  <p class="muted" style="margin:4px 0 0">Prototipo: los datos se guardan en este navegador. En la fase siguiente irán a SharePoint.</p>
+  <p class="muted" style="margin:4px 0 0">Prototipo: los datos se guardan en este navegador. <b>Guarda un respaldo después de cada cubicación.</b></p>
 </section>
 
 <script src="https://components.connect.trimble.com/trimble-connect-workspace-api/index.js"></script>
 <script>
 (async () => {
   const $ = id => document.getElementById(id);
+  const $$ = sel => [...document.querySelectorAll(sel)];
   const PALETA = ["#e6194b","#3cb44b","#4363d8","#f58231","#911eb4","#46f0f0","#f032e6","#bcf60c","#008080","#9a6324","#800000","#808000","#000075","#fabebe","#aaffc3"];
+  const C = { hecho:"#2e7d32", parcial:"#f59e0b", nada:"#cbd5e1", atraso:"#d92d20", adelanto:"#2563eb" };
   const CONTAR = "__contar", AUTO = "__auto";
   const IGNORAR = /origin|dir[xyz]|^[xyz]$|(^|[^a-z])id$|globalid|guid|tag|elevation|elevación|rotation|angle/i;
   const PREFERIDAS = /volume|volumen|area|área|length|longitud|height|altura|width|ancho|thickness|espesor|depth|perimeter|perímetro|weight|peso|xdim|ydim|zdim/i;
@@ -111,25 +222,23 @@
   const leerFactor = t => { const v = parseFloat(String(t).replace(",", ".")); return isFinite(v) && v > 0 ? v : 1; };
   const redondear = v => Math.round(v * 100) / 100;   // igual que ROUND(...,2) del Excel
   const num = v => typeof v === "number" ? v : (parseFloat(String(v ?? "").replace(/[$\s,]/g, "")) || 0);
+  const hoyISO = () => new Date().toISOString().slice(0, 10);
+  const fechaTxt = iso => iso ? iso.split("-").reverse().join("/") : "";
+  const padreDe = id => { id = id.replace(/ \(\d+\)$/, ""); return id.includes("-") ? id.slice(0, id.lastIndexOf("-")) : null; };
 
+  const VACIO = () => ({ obra: null, capitulos: [], partidas: [], elementos: {}, cubicaciones: [], registros: [], cronograma: null, avisos: [] });
   let API, claveDatos = "partidas-bim";
-  // obra: {codigo, descripcion}; capitulos: [{codigo, ref, descripcion, padre}]; partidas: [{codigo, ref, descripcion, unidad, precio, cantPres, padre, cantidad, factor}]
-  // elementos: { guid: {modelId, guid, clase, nombre, cantidades:{}, partidas:[codigo]} }
-  let datos = { obra: null, capitulos: [], partidas: [], elementos: {} };
-  let seleccion = [];
-  let partidaActiva = null;
+  let datos = VACIO();
+  let seleccion = [], partidaActiva = null, tareaActiva = null, cubVista = null, reproduciendo = null;
 
   const estado = t => $("estado").textContent = t;
-  function guardar() { try { localStorage.setItem(claveDatos, JSON.stringify(datos)); } catch (e) { estado("No se pudo guardar en el navegador"); } }
-  function cargar() {
-    try { const t = localStorage.getItem(claveDatos); if (t) datos = Object.assign({ obra: null, capitulos: [], partidas: [], elementos: {} }, JSON.parse(t)); } catch (e) {}
-  }
+  function guardar() { try { localStorage.setItem(claveDatos, JSON.stringify(datos)); } catch (e) { estado("¡No se pudo guardar en el navegador! Guarda un respaldo."); } }
+  function cargar() { try { const t = localStorage.getItem(claveDatos); if (t) datos = Object.assign(VACIO(), JSON.parse(t)); } catch (e) {} }
+  function limpiarElemento(guid) { const e = datos.elementos[guid]; if (e && !e.partidas.length && !(e.tareas || []).length) delete datos.elementos[guid]; }
 
   // ---------- Conexión ----------
   try {
-    API = await TrimbleConnectWorkspace.connect(window.parent, (evento) => {
-      if (evento === "viewer.onSelectionChanged") leerSeleccion();
-    }, 30000);
+    API = await TrimbleConnectWorkspace.connect(window.parent, evento => { if (evento === "viewer.onSelectionChanged") leerSeleccion(); }, 30000);
     const proyecto = await API.project.getProject();
     claveDatos = "partidas-bim:" + (proyecto?.id || "sin-proyecto");
     estado(proyecto?.name || "Conectado");
@@ -138,393 +247,585 @@
     $("selResumen").innerHTML = '<span class="bad">Esta página debe abrirse como extensión dentro del visor 3D de Trimble Connect.</span>';
   }
   cargar();
-  pintarTodo();
+  Object.values(datos.elementos).forEach(e => e.tareas ||= []);
+  $("cubFecha").value = hoyISO();
+
+  // ---------- Pestañas ----------
+  $$(".tabs button").forEach(b => b.onclick = () => {
+    $$(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+    $$(".pestana").forEach(p => p.classList.toggle("on", p.id === "tab-" + b.dataset.tab));
+    pintarTodo();
+  });
+  const pestana = () => $$(".tabs button").find(b => b.classList.contains("on")).dataset.tab;
 
   // ---------- Lectura del modelo ----------
   function extraerCantidades(p) {
     const out = {};
-    for (const pset of p.properties || []) {
-      for (const pr of pset.properties || []) {
-        const v = typeof pr.value === "number" ? pr.value : (typeof pr.value === "string" && /^-?\d+([.,]\d+)?$/.test(pr.value.trim()) ? parseFloat(pr.value.replace(",", ".")) : null);
-        if (v !== null && isFinite(v) && !IGNORAR.test(pr.name) && !(pr.name in out)) out[pr.name] = v;
-      }
+    for (const pset of p.properties || []) for (const pr of pset.properties || []) {
+      const v = typeof pr.value === "number" ? pr.value : (typeof pr.value === "string" && /^-?\d+([.,]\d+)?$/.test(pr.value.trim()) ? parseFloat(pr.value.replace(",", ".")) : null);
+      if (v !== null && isFinite(v) && !IGNORAR.test(pr.name) && !(pr.name in out)) out[pr.name] = v;
     }
     return out;
   }
-
   async function leerSeleccion() {
     if (!API) return;
     try {
-      const sel = await API.viewer.getSelection();
-      const lista = [];
-      for (const grupo of sel || []) {
-        const ids = grupo.objectRuntimeIds || [];
-        if (!ids.length) continue;
-        const props = await API.viewer.getObjectProperties(grupo.modelId, ids);
-        let guids;
-        try { guids = await API.viewer.convertToObjectIds(grupo.modelId, ids); } catch (e) { guids = ids.map(String); }
-        props.forEach((p, i) => lista.push({
-          modelId: grupo.modelId, runtimeId: ids[i], guid: guids[i] || String(ids[i]),
-          clase: p.class || "", nombre: p.product?.name || p.name || "", cantidades: extraerCantidades(p)
-        }));
+      const sel = await API.viewer.getSelection(), lista = [];
+      for (const g of sel || []) {
+        const ids = g.objectRuntimeIds || []; if (!ids.length) continue;
+        const props = await API.viewer.getObjectProperties(g.modelId, ids);
+        let guids; try { guids = await API.viewer.convertToObjectIds(g.modelId, ids); } catch (e) { guids = ids.map(String); }
+        props.forEach((p, i) => lista.push({ modelId: g.modelId, guid: guids[i] || String(ids[i]), clase: p.class || "", nombre: p.product?.name || p.name || "", cantidades: extraerCantidades(p) }));
       }
       seleccion = lista;
     } catch (e) { seleccion = []; estado("Error leyendo la selección"); }
     pintarSeleccion();
   }
+  function registrar(e) {
+    const reg = datos.elementos[e.guid] ||= { modelId: e.modelId, guid: e.guid, clase: e.clase, nombre: e.nombre, cantidades: e.cantidades, partidas: [], tareas: [] };
+    reg.cantidades = e.cantidades; reg.tareas ||= [];
+    return reg;
+  }
 
   // ---------- Presupuesto: importación formato Cayacoa ----------
   function interpretarFilas(filas) {
-    // filas: array de arrays de celdas. Busca la fila de encabezados.
     const iHead = filas.findIndex(f => { const n = f.map(norm); return n.includes("partida") && n.includes("nat") && n.includes("ud"); });
     if (iHead < 0) throw new Error("No encuentro la fila de encabezados (Partida, Código, Nat, Ud, Resumen, Cantidad, P.U., Total).");
-    const h = filas[iHead].map(norm);
-    const col = nombres => h.findIndex(x => nombres.includes(x));
-    const c = { partida: col(["partida"]), codigo: col(["codigo"]), nat: col(["nat"]), ud: col(["ud"]), resumen: col(["resumen"]),
-                cantidad: col(["cantidad"]), pu: col(["p.u.", "pu", "p.u", "precio"]), total: col(["total"]) };
+    const h = filas[iHead].map(norm), col = ns => h.findIndex(x => ns.includes(x));
+    const c = { partida: col(["partida"]), codigo: col(["codigo"]), nat: col(["nat"]), ud: col(["ud"]), resumen: col(["resumen"]), cantidad: col(["cantidad"]), pu: col(["p.u.", "pu", "p.u", "precio"]) };
     if (c.partida < 0 || c.nat < 0 || c.resumen < 0) throw new Error("Faltan columnas obligatorias (Partida, Nat, Resumen).");
-    const res = { obra: null, capitulos: [], partidas: [], avisos: [] };
-    const usados = new Set();
-    const padreDe = id => { id = id.replace(/ \(\d+\)$/, ""); return id.includes("-") ? id.slice(0, id.lastIndexOf("-")) : null; };
+    const res = { obra: null, capitulos: [], partidas: [], avisos: [] }, usados = new Set();
     for (const f of filas.slice(iHead + 1)) {
-      let id = String(f[c.partida] ?? "").trim();
-      const nat = norm(f[c.nat]);
-      if (!id || !nat) continue;                    // subtotales, vacías, TOTAL GENERAL
+      let id = String(f[c.partida] ?? "").trim(); const nat = norm(f[c.nat]);
+      if (!id || !nat) continue;
       if (usados.has(id)) {
         let k = 2; while (usados.has(`${id} (${k})`)) k++;
-        res.avisos.push(`El código ${id} está repetido en el Excel («${String(f[c.resumen] ?? "").trim()}»). Se cargó como ${id} (${k}); conviene corregirlo en el Excel.`);
+        res.avisos.push(`El código ${id} está repetido en el Excel («${String(f[c.resumen] ?? "").trim()}»). Se cargó como ${id} (${k}).`);
         id = `${id} (${k})`;
       }
       usados.add(id);
       const base = { codigo: id, ref: String(f[c.codigo] ?? "").trim(), descripcion: String(f[c.resumen] ?? "").trim() };
       if (nat === "obra") res.obra = base;
       else if (nat.startsWith("capitulo")) res.capitulos.push({ ...base, padre: padreDe(id) });
-      else if (nat === "partida") res.partidas.push({ ...base, padre: padreDe(id), unidad: String(f[c.ud] ?? "").trim().toUpperCase(),
-        cantPres: num(f[c.cantidad]), precio: num(f[c.pu]), cantidad: AUTO, factor: 1 });
+      else if (nat === "partida") res.partidas.push({ ...base, padre: padreDe(id), unidad: String(f[c.ud] ?? "").trim().toUpperCase(), cantPres: num(f[c.cantidad]), precio: num(f[c.pu]), cantidad: AUTO, factor: 1 });
     }
     if (!res.partidas.length) throw new Error("No encontré filas con Nat = «Partida».");
     return res;
   }
-
   function aplicarPresupuesto(res) {
-    const tenia = datos.partidas.length;
-    if (tenia && !confirm(`Se va a sustituir el presupuesto actual (${tenia} partidas) por el nuevo (${res.partidas.length} partidas). Las asignaciones de partidas que sigan existiendo se conservan. ¿Continuar?`)) return;
-    const anteriores = Object.fromEntries(datos.partidas.map(p => [p.codigo, p]));
-    res.partidas.forEach(p => { const a = anteriores[p.codigo]; if (a) { p.cantidad = a.cantidad; p.factor = a.factor; } });
+    if (datos.partidas.length && !confirm(`Se sustituye el presupuesto actual (${datos.partidas.length} partidas) por el nuevo (${res.partidas.length}). Se conservan asignaciones y cubicaciones de las partidas que sigan existiendo. ¿Continuar?`)) return;
+    const ant = Object.fromEntries(datos.partidas.map(p => [p.codigo, p]));
+    res.partidas.forEach(p => { const a = ant[p.codigo]; if (a) { p.cantidad = a.cantidad; p.factor = a.factor; } });
     const validos = new Set(res.partidas.map(p => p.codigo));
-    let huerfanas = 0;
-    for (const e of Object.values(datos.elementos)) {
-      const antes = e.partidas.length;
-      e.partidas = e.partidas.filter(c => validos.has(c));
-      huerfanas += antes - e.partidas.length;
-      if (!e.partidas.length) delete datos.elementos[e.guid];
-    }
-    datos.obra = res.obra; datos.capitulos = res.capitulos; datos.partidas = res.partidas; datos.avisos = res.avisos;
+    for (const e of Object.values(datos.elementos)) { e.partidas = e.partidas.filter(c => validos.has(c)); limpiarElemento(e.guid); }
+    datos.registros = datos.registros.filter(r => validos.has(r.partida));
+    Object.assign(datos, { obra: res.obra, capitulos: res.capitulos, partidas: res.partidas, avisos: res.avisos });
     guardar(); pintarTodo();
-    estado(`${res.partidas.length} partidas en ${res.capitulos.length} capítulos` + (huerfanas ? ` · ${huerfanas} asignaciones quitadas` : ""));
+    estado(`${res.partidas.length} partidas en ${res.capitulos.length} capítulos`);
     if (res.avisos.length) alert("Revisa el presupuesto:\n\n" + res.avisos.join("\n\n"));
   }
-
   async function cargarSheetJS() {
     if (window.XLSX) return;
-    await new Promise((ok, mal) => {
-      const s = document.createElement("script");
-      s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-      s.onload = ok; s.onerror = () => mal(new Error("No se pudo cargar el lector de Excel."));
-      document.head.appendChild(s);
-    });
+    await new Promise((ok, mal) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload = ok; s.onerror = () => mal(new Error("No se pudo cargar el lector de Excel.")); document.head.appendChild(s); });
   }
-
   $("fileXLSX").onchange = async ev => {
     const f = ev.target.files[0]; if (!f) return;
     try {
-      estado("Leyendo Excel…");
-      await cargarSheetJS();
+      estado("Leyendo Excel…"); await cargarSheetJS();
       const libro = XLSX.read(await f.arrayBuffer(), { type: "array" });
       const nombre = libro.SheetNames.find(n => norm(n) === "presupuesto") || libro.SheetNames[0];
-      const filas = XLSX.utils.sheet_to_json(libro.Sheets[nombre], { header: 1, raw: true, defval: "" });
-      aplicarPresupuesto(interpretarFilas(filas));
+      aplicarPresupuesto(interpretarFilas(XLSX.utils.sheet_to_json(libro.Sheets[nombre], { header: 1, raw: true, defval: "" })));
     } catch (e) { alert(e.message || "No se pudo leer el archivo."); estado("Error al leer el Excel"); }
     ev.target.value = "";
   };
+  $("btnPegar").onclick = () => { try { aplicarPresupuesto(interpretarFilas($("pegar").value.split(/\r?\n/).map(l => l.split("\t")))); $("pegar").value = ""; } catch (e) { alert(e.message); } };
 
-  $("btnPegar").onclick = () => {
-    try {
-      const filas = $("pegar").value.split(/\r?\n/).map(l => l.split("\t"));
-      aplicarPresupuesto(interpretarFilas(filas));
-      $("pegar").value = "";
-    } catch (e) { alert(e.message); }
-  };
-
-  // ---------- Cálculos ----------
+  // ---------- Medición ----------
+  const partidaPor = cod => datos.partidas.find(p => p.codigo === cod);
   function elementosDe(codigo) { return Object.values(datos.elementos).filter(e => e.partidas.includes(codigo)); }
-
-  function claveAuto(unidad, cantidades) {
-    const u = norm(unidad), k = Object.keys(cantidades);
+  function claveAuto(unidad, cant) {
+    const u = norm(unidad), k = Object.keys(cant);
     const busca = (...re) => { for (const r of re) { const x = k.find(n => r.test(n)); if (x) return x; } return null; };
     if (u === "m3") return busca(/^netvolume$/i, /volume|volumen/i);
     if (u === "m2") return busca(/^netarea$/i, /netsidearea/i, /area|área/i);
     if (u === "m" || u === "ml") return busca(/^length$/i, /length|longitud/i);
     if (u === "p2") return busca(/area|área/i);
     if (u === "kg") return busca(/weight|peso|mass/i);
-    return CONTAR;                                         // U, UD, PA y otras: contar
+    return CONTAR;
   }
-
-  function claveDe(p, e) { return p.cantidad === AUTO ? claveAuto(p.unidad, e.cantidades) : p.cantidad; }
-
+  const claveDe = (p, e) => p.cantidad === AUTO ? claveAuto(p.unidad, e.cantidades) : p.cantidad;
+  function cantElem(p, e) {           // cantidad del elemento en la unidad de la partida (null si no se puede medir)
+    const k = claveDe(p, e);
+    if (k === CONTAR) return 1;
+    return k && k in e.cantidades ? e.cantidades[k] * (p.factor ?? 1) : null;
+  }
   function medir(p) {
-    const els = elementosDe(p.codigo);
-    let cantidad = 0, faltan = 0;
-    for (const e of els) {
-      const k = claveDe(p, e);
-      if (k === CONTAR) cantidad += 1;
-      else if (k && k in e.cantidades) cantidad += e.cantidades[k] * (p.factor ?? 1);
-      else faltan++;
-    }
+    const els = elementosDe(p.codigo); let cantidad = 0, faltan = 0;
+    for (const e of els) { const q = cantElem(p, e); if (q === null) faltan++; else cantidad += q; }
     return { n: els.length, cantidad, faltan, importe: redondear(cantidad * (p.precio || 0)), importePres: redondear((p.cantPres || 0) * (p.precio || 0)) };
   }
-
   async function selectorDe(elementos) {
-    const porModelo = {};
-    for (const e of elementos) (porModelo[e.modelId] ||= []).push(e.guid);
+    const porModelo = {}; for (const e of elementos) (porModelo[e.modelId] ||= []).push(e.guid);
     const modelObjectIds = [];
     for (const [modelId, guids] of Object.entries(porModelo)) {
-      let ids = [];
-      try { ids = await API.viewer.convertToObjectRuntimeIds(modelId, guids); } catch (e) {}
+      let ids = []; try { ids = await API.viewer.convertToObjectRuntimeIds(modelId, guids); } catch (e) {}
       ids = ids.filter(x => x !== null && x !== undefined);
       if (ids.length) modelObjectIds.push({ modelId, objectRuntimeIds: ids });
     }
     return { modelObjectIds };
   }
+  async function restablecer() { if (!API) return; try { await API.viewer.setObjectState(undefined, { color: "reset", visible: "reset" }); } catch (e) { try { await API.viewer.reset(); } catch (e2) {} } }
+  async function pintarGrupos(grupos, ocultos) {   // grupos: [{elems, color}]
+    if (!API) return;
+    await restablecer();
+    for (const g of grupos) if (g.elems.length) try { await API.viewer.setObjectState(await selectorDe(g.elems), { color: g.color }); } catch (e) {}
+    if (ocultos?.length) try { await API.viewer.setObjectState(await selectorDe(ocultos), { visible: false }); } catch (e) {}
+  }
+  $$(".btnReset").forEach(b => b.onclick = async () => { await restablecer(); estado("Vista restablecida"); });
+
+  // ---------- Cubicación: cálculo ----------
+  const cubAbierta = () => datos.cubicaciones.find(c => !c.cerrada) || null;
+  const cubNum = n => datos.cubicaciones.find(c => c.num === n);
+  function indiceRegistros(hasta) {      // estado a origen hasta la cubicación n
+    const pct = {}, manual = {};
+    for (const r of datos.registros) {
+      if (r.cub > hasta) continue;
+      if (r.tipo === "elem") pct[r.guid + "|" + r.partida] = r.valor;
+      else manual[r.partida] = (manual[r.partida] || 0) + r.valor;
+    }
+    return { pct, manual };
+  }
+  function cubicadoOrigen(hasta) {       // { codigo: {modelo, manual, total} }
+    const { pct, manual } = indiceRegistros(hasta), out = {};
+    for (const p of datos.partidas) {
+      let modelo = 0;
+      for (const e of elementosDe(p.codigo)) { const v = pct[e.guid + "|" + p.codigo]; if (v) { const q = cantElem(p, e); if (q !== null) modelo += q * v / 100; } }
+      const m = manual[p.codigo] || 0;
+      if (modelo || m) out[p.codigo] = { modelo, manual: m, total: modelo + m };
+    }
+    return out;
+  }
+  function pctElemento(e, hasta) {       // avance medio del elemento en sus partidas
+    if (!e.partidas.length) return null;
+    const { pct } = indiceRegistros(hasta);
+    return e.partidas.reduce((a, c) => a + (pct[e.guid + "|" + c] || 0), 0) / e.partidas.length;
+  }
+
+  // ---------- Cubicación: acciones ----------
+  $("btnNuevaCub").onclick = () => {
+    if (!datos.partidas.length) return alert("Carga primero el presupuesto.");
+    const ab = cubAbierta();
+    if (ab && !confirm(`La cubicación ${ab.num} sigue abierta. ¿Cerrarla y crear la siguiente?`)) return;
+    if (ab) ab.cerrada = true;
+    const n = (datos.cubicaciones.at(-1)?.num || 0) + 1;
+    datos.cubicaciones.push({ num: n, fecha: $("cubFecha").value || hoyISO(), cerrada: false });
+    cubVista = n; guardar(); pintarTodo(); estado(`Cubicación ${n} abierta`);
+  };
+  $("btnCerrarCub").onclick = () => {
+    const c = cubNum(cubVista); if (!c) return;
+    if (!c.cerrada) { if (!confirm(`¿Cerrar la cubicación ${c.num}? Ya no se podrán añadir avances a ella.`)) return; c.cerrada = true; }
+    else {
+      if (cubAbierta()) return alert("Ya hay otra cubicación abierta. Ciérrala primero.");
+      if (c.num !== datos.cubicaciones.at(-1).num) return alert("Solo se puede reabrir la última cubicación.");
+      c.cerrada = false;
+    }
+    guardar(); pintarTodo();
+  };
+  $("cubSel").onchange = () => { cubVista = Number($("cubSel").value); pintarCubicacion(); };
+  $("cubFecha").onchange = () => { const c = cubNum(cubVista); if (c && !c.cerrada) { c.fecha = $("cubFecha").value; guardar(); pintarCubicacion(); } };
+
+  function aplicarPct(pct) {
+    const c = cubAbierta();
+    if (!c) return alert("Crea o abre una cubicación primero.");
+    if (!seleccion.length) return alert("Selecciona en el modelo los elementos ejecutados.");
+    if (!(pct >= 0 && pct <= 100)) return alert("El % debe estar entre 0 y 100.");
+    const una = $("cubAlcance").value === "una" ? partidaDesdeTexto($("buscaPartida").value) : null;
+    if ($("cubAlcance").value === "una" && !una) return alert("Elige la partida arriba.");
+    let n = 0, sin = 0;
+    for (const s of seleccion) {
+      const e = datos.elementos[s.guid];
+      const partidas = una ? (e?.partidas.includes(una.codigo) ? [una.codigo] : []) : (e?.partidas || []);
+      if (!partidas.length) { sin++; continue; }
+      for (const cod of partidas) {
+        datos.registros = datos.registros.filter(r => !(r.tipo === "elem" && r.guid === s.guid && r.partida === cod && r.cub === c.num));
+        datos.registros.push({ tipo: "elem", guid: s.guid, partida: cod, valor: pct, cub: c.num, t: Date.now() });
+        n++;
+      }
+    }
+    cubVista = c.num; guardar(); pintarTodo();
+    estado(`${n} avances al ${pct} % en la cubicación ${c.num}` + (sin ? ` · ${sin} elementos sin partida` : ""));
+  }
+  $$(".btnPct").forEach(b => b.onclick = () => aplicarPct(Number(b.dataset.pct)));
+  $("btnPctAplicar").onclick = () => aplicarPct(parseFloat($("cubPct").value.replace(",", ".")));
+
+  $("btnCantManual").onclick = () => {
+    const c = cubAbierta(); if (!c) return alert("Crea o abre una cubicación primero.");
+    const p = partidaDesdeTexto($("buscaPartida").value); if (!p) return alert("Elige la partida arriba.");
+    const q = parseFloat($("cubCant").value.replace(/,/g, "")); if (!isFinite(q) || q === 0) return alert("Escribe la cantidad ejecutada en este período.");
+    datos.registros.push({ tipo: "manual", partida: p.codigo, valor: q, cub: c.num, t: Date.now() });
+    $("cubCant").value = ""; cubVista = c.num; guardar(); pintarTodo();
+    estado(`${fmt(q, 3)} ${p.unidad} añadidos a ${p.codigo}`);
+  };
+  $("cubRegistros").addEventListener("click", ev => {
+    const b = ev.target.closest("button[data-t]"); if (!b) return;
+    const c = cubNum(cubVista); if (!c || c.cerrada) return alert("Esta cubicación está cerrada.");
+    datos.registros = datos.registros.filter(r => String(r.t) !== b.dataset.t);
+    guardar(); pintarTodo();
+  });
+
+  $("btnColorAvance").onclick = async () => {
+    const n = cubVista; if (!n) return;
+    const g = { hecho: [], parcial: [], nada: [] };
+    for (const e of Object.values(datos.elementos)) {
+      const v = pctElemento(e, n); if (v === null) continue;
+      (v >= 99.999 ? g.hecho : v > 0 ? g.parcial : g.nada).push(e);
+    }
+    await pintarGrupos([{ elems: g.nada, color: C.nada }, { elems: g.parcial, color: C.parcial }, { elems: g.hecho, color: C.hecho }]);
+    estado(`Avance a la cubicación ${n}: ${g.hecho.length} completos · ${g.parcial.length} parciales`);
+  };
+
+  // ---------- Cronograma ----------
+  function parseFecha(v) {
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    const s = String(v ?? "").trim(); if (!s) return null;
+    let m = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
+    m = s.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+    if (m) { const y = m[3].length === 2 ? "20" + m[3] : m[3]; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; }
+    return null;
+  }
+  function leerCronogramaCSV(texto) {
+    const sep = texto.split(/\r?\n/)[0].includes(";") ? ";" : texto.split(/\r?\n/)[0].includes("\t") ? "\t" : ",";
+    const filas = texto.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim()).map(l => l.split(sep).map(x => x.replace(/^"|"$/g, "")));
+    const h = filas[0].map(norm), col = (...ns) => h.findIndex(x => ns.some(n => x === n || x.includes(n)));
+    const c = { id: col("unique_id", "id unico", "id"), nombre: col("nombre", "name"), nivel: col("outline_level", "nivel de esquema", "nivel"), inicio: col("start", "comienzo", "inicio"), fin: col("finish", "fin") };
+    if (c.nombre < 0 || c.inicio < 0 || c.fin < 0) throw new Error("El CSV necesita columnas de nombre, comienzo y fin.");
+    const t = filas.slice(1).map((f, i) => ({ id: c.id >= 0 ? Number(f[c.id]) || i + 1 : i + 1, nivel: c.nivel >= 0 ? Number(f[c.nivel]) || 1 : 1, nombre: f[c.nombre].trim(), inicio: parseFecha(f[c.inicio]), fin: parseFecha(f[c.fin]) })).filter(x => x.nombre && x.inicio && x.fin);
+    t.forEach((x, i) => x.resumen = (t[i + 1]?.nivel || 0) > x.nivel);
+    return { nombre: "Cronograma", tareas: t };
+  }
+  $("fileCro").onchange = async ev => {
+    const f = ev.target.files[0]; if (!f) return;
+    try {
+      const texto = await f.text();
+      let cro;
+      if (/\.json$/i.test(f.name)) { cro = JSON.parse(texto); if (!Array.isArray(cro.tareas)) throw new Error("El JSON no tiene tareas."); }
+      else cro = leerCronogramaCSV(texto);
+      if (datos.cronograma && !confirm("Se sustituye el cronograma actual. Se conservan los vínculos de las tareas con el mismo Id. ¿Continuar?")) return;
+      const ids = new Set(cro.tareas.map(t => t.id));
+      for (const e of Object.values(datos.elementos)) { e.tareas = (e.tareas || []).filter(i => ids.has(i)); limpiarElemento(e.guid); }
+      datos.cronograma = cro; tareaActiva = null;
+      guardar(); pintarTodo(); ajustarSlider(); estado(`${cro.tareas.length} tareas cargadas`);
+    } catch (e) { alert(e.message || "No se pudo leer el cronograma."); }
+    ev.target.value = "";
+  };
+  const tareas = () => datos.cronograma?.tareas || [];
+  const tareaPor = id => tareas().find(t => t.id === id);
+  const elementosDeTarea = id => Object.values(datos.elementos).filter(e => (e.tareas || []).includes(id));
+  const diasEntre = (a, b) => (new Date(b) - new Date(a)) / 864e5;
+  function rangoCro() { const ts = tareas().filter(t => !t.resumen); if (!ts.length) return null; return { ini: ts.map(t => t.inicio).sort()[0], fin: ts.map(t => t.fin).sort().at(-1) }; }
+  function sinProgramar(t) { const r = rangoCro(); return !t.resumen && r && t.inicio === r.ini && t.fin === t.inicio && !/^(inicio|fin)\b/i.test(t.nombre.trim()); }
+  function planPct(t, fecha) { if (fecha < t.inicio) return 0; if (fecha >= t.fin) return 100; const d = diasEntre(t.inicio, t.fin); return d > 0 ? diasEntre(t.inicio, fecha) / d * 100 : 100; }
+  function ajustarSlider() {
+    const r = rangoCro(); if (!r) return;
+    const total = Math.max(1, Math.round(diasEntre(r.ini, r.fin)));
+    $("croSlider").max = total;
+    if (!$("croFecha").value) $("croFecha").value = r.ini;
+    $("croSlider").value = Math.round(diasEntre(r.ini, $("croFecha").value));
+  }
+  $("croSlider").oninput = () => { const r = rangoCro(); if (!r) return; const d = new Date(r.ini); d.setDate(d.getDate() + Number($("croSlider").value)); $("croFecha").value = d.toISOString().slice(0, 10); pintarCronograma(); };
+  $("croFecha").onchange = () => { ajustarSlider(); pintarCronograma(); };
+  $("croModo").onchange = pintarCronograma;
+
+  function cubHastaFecha(fecha) { const cs = datos.cubicaciones.filter(c => c.fecha <= fecha); return cs.length ? cs.at(-1).num : 0; }
+  async function verSecuencia() {
+    const fecha = $("croFecha").value; if (!fecha || !tareas().length) return;
+    const modo = $("croModo").value, ocultar = $("croOcultar").checked, cub = cubHastaFecha(fecha);
+    const g = { hecho: [], parcial: [], nada: [], atraso: [], adelanto: [] }, ocultos = [];
+    for (const e of Object.values(datos.elementos)) {
+      const ts = (e.tareas || []).map(tareaPor).filter(Boolean); if (!ts.length) continue;
+      const plan = ts.reduce((a, t) => a + planPct(t, fecha), 0) / ts.length;
+      if (modo === "plan") {
+        if (plan >= 100) g.hecho.push(e); else if (plan > 0) g.parcial.push(e); else (ocultar ? ocultos : g.nada).push(e);
+      } else {
+        const real = pctElemento(e, cub) ?? 0;
+        if (real >= 99.999) g.hecho.push(e);
+        else if (plan >= 100) g.atraso.push(e);
+        else if (real > plan + 0.001) g.adelanto.push(e);
+        else if (plan > 0 || real > 0) g.parcial.push(e);
+        else (ocultar ? ocultos : g.nada).push(e);
+      }
+    }
+    await pintarGrupos([{ elems: g.nada, color: C.nada }, { elems: g.parcial, color: C.parcial }, { elems: g.adelanto, color: C.adelanto }, { elems: g.atraso, color: C.atraso }, { elems: g.hecho, color: C.hecho }], ocultos);
+    estado(`${fechaTxt(fecha)}: ${g.hecho.length} terminados · ${g.parcial.length} en curso` + (modo === "real" ? ` · ${g.atraso.length} atrasados` : ""));
+  }
+  $("btnCroVer").onclick = verSecuencia;
+  $("btnCroPlay").onclick = async () => {
+    if (reproduciendo) { reproduciendo = false; $("btnCroPlay").textContent = "▶ Reproducir"; return; }
+    const r = rangoCro(); if (!r) return alert("Carga primero el cronograma.");
+    reproduciendo = true; $("btnCroPlay").textContent = "■ Detener";
+    for (let d = new Date(r.ini); reproduciendo && d.toISOString().slice(0, 10) <= r.fin; d.setDate(d.getDate() + 7)) {
+      $("croFecha").value = d.toISOString().slice(0, 10); ajustarSlider(); pintarCronograma();
+      await verSecuencia(); await new Promise(ok => setTimeout(ok, 900));
+    }
+    reproduciendo = false; $("btnCroPlay").textContent = "▶ Reproducir";
+  };
+  $("btnTareaAsignar").onclick = () => {
+    const t = tareaPor(tareaActiva); if (!t) return;
+    if (!seleccion.length) return alert("Selecciona elementos en el visor.");
+    for (const s of seleccion) { const e = registrar(s); if (!e.tareas.includes(t.id)) e.tareas.push(t.id); }
+    guardar(); pintarTodo(); estado(`${seleccion.length} elementos → ${t.nombre}`);
+  };
+  $("btnTareaQuitar").onclick = () => {
+    const t = tareaPor(tareaActiva); if (!t) return; let n = 0;
+    for (const s of seleccion) { const e = datos.elementos[s.guid]; if (e?.tareas.includes(t.id)) { e.tareas = e.tareas.filter(i => i !== t.id); limpiarElemento(e.guid); n++; } }
+    guardar(); pintarTodo(); estado(`${n} elementos quitados de la tarea`);
+  };
+  $("tablaCro").addEventListener("click", async ev => {
+    const b = ev.target.closest("button[data-ver]");
+    if (b) { const els = elementosDeTarea(Number(b.dataset.ver)); if (els.length && API) { const s = await selectorDe(els); try { await API.viewer.setSelection(s, "set"); await API.viewer.setCamera(s, { animationTime: 400 }); } catch (e) {} } return; }
+    const fila = ev.target.closest("tr[data-tarea]");
+    if (fila) { tareaActiva = Number(fila.dataset.tarea); pintarCronograma(); }
+  });
+  $("croFiltro").oninput = () => pintarCronograma();
+  $("croSoloLigadas").onchange = () => pintarCronograma();
 
   // ---------- Pintado ----------
-  function pintarTodo() { pintarListaPartidas(); pintarPartidas(); pintarSeleccion(); }
-
-  function etiqueta(p) { return `${p.codigo} · ${p.descripcion}`; }
+  function pintarTodo() {
+    $("listaPartidas").innerHTML = datos.partidas.map(p => `<option value="${esc(etiqueta(p))}">${esc(p.unidad)}</option>`).join("");
+    pintarSeleccion();
+    const t = pestana();
+    if (t === "pres") pintarPartidas(); else if (t === "cub") pintarCubicacion(); else pintarCronograma();
+  }
+  const etiqueta = p => `${p.codigo} · ${p.descripcion}`;
   function partidaDesdeTexto(t) {
     t = String(t).trim(); if (!t) return null;
     const cod = t.split(" · ")[0].trim();
-    return datos.partidas.find(p => p.codigo === cod) || datos.partidas.find(p => p.ref === cod) ||
-      datos.partidas.find(p => norm(p.descripcion).includes(norm(t)));
+    return partidaPor(cod) || datos.partidas.find(p => p.ref === cod) || datos.partidas.find(p => norm(p.descripcion).includes(norm(t)));
   }
-
-  function pintarListaPartidas() {
-    $("listaPartidas").innerHTML = datos.partidas.map(p => `<option value="${esc(etiqueta(p))}">${esc(p.unidad)}</option>`).join("");
-  }
+  $("buscaPartida").onchange = () => { const p = partidaDesdeTexto($("buscaPartida").value); partidaActiva = p?.codigo || null; $("cubUd").textContent = p ? p.unidad : ""; };
 
   function pintarSeleccion() {
     if (!seleccion.length) { $("selResumen").textContent = "Selecciona elementos en el visor."; $("selTabla").innerHTML = ""; return; }
-    const clases = {};
-    seleccion.forEach(e => clases[e.clase] = (clases[e.clase] || 0) + 1);
-    const conPartida = seleccion.filter(e => datos.elementos[e.guid]?.partidas.length).length;
-    $("selResumen").innerHTML = `<b>${seleccion.length}</b> elementos · ${Object.entries(clases).map(([c, n]) => `${esc(c)} (${n})`).join(", ")}<br><span class="muted">${conPartida} ya tienen partida</span>`;
+    const clases = {}; seleccion.forEach(e => clases[e.clase] = (clases[e.clase] || 0) + 1);
+    const conP = seleccion.filter(e => datos.elementos[e.guid]?.partidas.length).length;
+    const conT = seleccion.filter(e => datos.elementos[e.guid]?.tareas?.length).length;
+    $("selResumen").innerHTML = `<b>${seleccion.length}</b> elementos · ${Object.entries(clases).map(([c, n]) => `${esc(c)} (${n})`).join(", ")}<br><span class="muted">${conP} con partida · ${conT} con tarea</span>`;
     const filas = seleccion.slice(0, 300).map(e => {
-      const asig = datos.elementos[e.guid]?.partidas.join("<br>") || '<span class="muted">—</span>';
+      const r = datos.elementos[e.guid];
+      const asig = [...(r?.partidas || []), ...(r?.tareas || []).map(i => "⏱ " + (tareaPor(i)?.nombre || i))].map(esc).join("<br>") || '<span class="muted">—</span>';
       const cant = ordenar(Object.keys(e.cantidades)).map(k => `${PREFERIDAS.test(k) ? "<b>" + esc(k) + "</b>" : esc(k)}: ${fmt(e.cantidades[k], 3)}`).join("<br>");
       return `<tr><td>${esc(e.clase)}<br><span class="muted">${esc(e.nombre)}</span></td><td>${cant || '<span class="muted">sin cantidades</span>'}</td><td>${asig}</td></tr>`;
     }).join("");
-    $("selTabla").innerHTML = `<table><tr><th>Elemento</th><th>Cantidades del modelo</th><th>Partidas</th></tr>${filas}</table>` +
-      (seleccion.length > 300 ? `<p class="muted">Mostrando 300 de ${seleccion.length}.</p>` : "");
+    $("selTabla").innerHTML = `<table><tr><th>Elemento</th><th>Cantidades</th><th>Vínculos</th></tr>${filas}</table>` + (seleccion.length > 300 ? `<p class="muted">Mostrando 300 de ${seleccion.length}.</p>` : "");
   }
 
+  // Árbol de capítulos + partidas (compartido por Presupuesto y Cubicación)
+  function arbol(visibles) {
+    const caps = new Set();
+    visibles.forEach(p => { let c = p.padre; while (c) { caps.add(c); c = padreDe(c); } });
+    return [...datos.capitulos.filter(c => caps.has(c.codigo)).map(c => ({ tipo: "cap", ...c })), ...visibles.map(p => ({ tipo: "par", ...p }))]
+      .sort((a, b) => a.codigo.localeCompare(b.codigo, "es", { numeric: true }) || (a.tipo === "cap" ? -1 : 1));
+  }
+  const nivelCap = id => id.split("-").length - 1;
+  function sumaPorCapitulo(valor) { const s = {}; for (const p of datos.partidas) { const v = valor(p); let c = p.padre; while (c) { s[c] = (s[c] || 0) + v; c = padreDe(c); } } return s; }
+
   function opcionesPara(p) {
-    const nombres = new Set();
-    elementosDe(p.codigo).forEach(e => Object.keys(e.cantidades).forEach(k => nombres.add(k)));
+    const nombres = new Set(); elementosDe(p.codigo).forEach(e => Object.keys(e.cantidades).forEach(k => nombres.add(k)));
     if (p.cantidad !== AUTO && p.cantidad !== CONTAR) nombres.add(p.cantidad);
-    const ops = [[AUTO, "Auto (según unidad)"], [CONTAR, "Contar unidades"], ...ordenar([...nombres]).map(n => [n, n])];
-    return ops.map(([v, t]) => `<option value="${esc(v)}" ${v === p.cantidad ? "selected" : ""}>${esc(t)}</option>`).join("");
+    return [[AUTO, "Auto (según unidad)"], [CONTAR, "Contar unidades"], ...ordenar([...nombres]).map(n => [n, n])].map(([v, t]) => `<option value="${esc(v)}" ${v === p.cantidad ? "selected" : ""}>${esc(t)}</option>`).join("");
   }
 
   function pintarPartidas() {
     $("tituloObra").textContent = datos.obra ? `${datos.obra.codigo} · ${datos.obra.descripcion}` : "Presupuesto";
-    if (!datos.partidas.length) {
-      $("kpis").innerHTML = ""; $("tablaPartidas").innerHTML = '<p class="muted">Aún no hay presupuesto. Cárgalo abajo desde el Excel.</p>'; return;
-    }
-    // Totales
-    const medidas = Object.fromEntries(datos.partidas.map(p => [p.codigo, medir(p)]));
-    let totPres = 0, totModelo = 0, presCubierto = 0, nConElementos = 0;
-    for (const p of datos.partidas) {
-      const m = medidas[p.codigo];
-      totPres += m.importePres;
-      if (m.n) { nConElementos++; totModelo += m.importe; presCubierto += m.importePres; }
-    }
-    $("kpis").innerHTML = `<div class="kpi">
-      <div><small>Presupuesto</small><b>${fmt(totPres)}</b></div>
-      <div><small>Partidas ligadas al modelo</small><b>${nConElementos} / ${datos.partidas.length}</b></div>
-      <div><small>% del presupuesto ligado</small><b>${fmt(totPres ? presCubierto / totPres * 100 : 0, 1)} %</b></div>
-      <div><small>Importe medido en modelo</small><b>${fmt(totModelo)}</b><small>presup. de esas partidas: ${fmt(presCubierto)}</small></div></div>`;
-
-    // Árbol filtrado
-    const filtro = norm($("filtro").value), solo = $("soloAsignadas").checked;
-    const visibles = datos.partidas.filter(p => (!solo || medidas[p.codigo].n) &&
-      (!filtro || norm(p.codigo + " " + p.ref + " " + p.descripcion).includes(filtro)));
-    const capsVisibles = new Set();
-    visibles.forEach(p => { let c = p.padre; while (c) { capsVisibles.add(c); c = c.includes("-") ? c.slice(0, c.lastIndexOf("-")) : null; } });
-    const sumaCap = {};
-    for (const p of datos.partidas) {
-      let c = p.padre;
-      while (c) { (sumaCap[c] ||= { pres: 0, mod: 0 }); sumaCap[c].pres += medidas[p.codigo].importePres; sumaCap[c].mod += medidas[p.codigo].importe; c = c.includes("-") ? c.slice(0, c.lastIndexOf("-")) : null; }
-    }
-    const nivel = id => id.split("-").length - 1;
-    const filasCap = Object.fromEntries(datos.capitulos.map(c => [c.codigo, c]));
-    const orden = [...datos.capitulos.map(c => ({ tipo: "cap", ...c })), ...visibles.map(p => ({ tipo: "par", ...p }))]
-      .filter(x => x.tipo === "par" || capsVisibles.has(x.codigo))
-      .sort((a, b) => a.codigo.localeCompare(b.codigo, "es", { numeric: true }) || (a.tipo === "cap" ? -1 : 1));
-    const indice = Object.fromEntries(datos.partidas.map((p, i) => [p.codigo, i]));
-
-    const html = orden.slice(0, 600).map(x => {
-      if (x.tipo === "cap") {
-        const s = sumaCap[x.codigo] || { pres: 0, mod: 0 };
-        return `<tr class="${nivel(x.codigo) <= 1 ? "cap1" : "cap2"}"><td colspan="2">${esc(x.ref)} ${esc(x.descripcion)}</td><td class="num">${fmt(s.pres)}</td><td class="num">${s.mod ? fmt(s.mod) : ""}</td></tr>`;
-      }
-      const p = x, i = indice[p.codigo], m = medidas[p.codigo];
+    if (!datos.partidas.length) { $("kpis").innerHTML = ""; $("tablaPartidas").innerHTML = '<p class="muted">Aún no hay presupuesto. Cárgalo abajo desde el Excel.</p>'; return; }
+    const M = Object.fromEntries(datos.partidas.map(p => [p.codigo, medir(p)]));
+    let totPres = 0, totModelo = 0, cubierto = 0, nCon = 0;
+    for (const p of datos.partidas) { const m = M[p.codigo]; totPres += m.importePres; if (m.n) { nCon++; totModelo += m.importe; cubierto += m.importePres; } }
+    $("kpis").innerHTML = `<div class="kpi"><div><small>Presupuesto</small><b>${fmt(totPres)}</b></div><div><small>Partidas ligadas</small><b>${nCon} / ${datos.partidas.length}</b></div>
+      <div><small>% del presupuesto ligado</small><b>${fmt(totPres ? cubierto / totPres * 100 : 0, 1)} %</b></div><div><small>Medido en modelo</small><b>${fmt(totModelo)}</b><small>presup. de esas partidas: ${fmt(cubierto)}</small></div></div>`;
+    const f = norm($("filtro").value), solo = $("soloAsignadas").checked;
+    const visibles = datos.partidas.filter(p => (!solo || M[p.codigo].n) && (!f || norm(p.codigo + " " + p.ref + " " + p.descripcion).includes(f)));
+    const sP = sumaPorCapitulo(p => M[p.codigo].importePres), sM = sumaPorCapitulo(p => M[p.codigo].importe);
+    const idx = Object.fromEntries(datos.partidas.map((p, i) => [p.codigo, i]));
+    const filas = arbol(visibles);
+    const html = filas.slice(0, 600).map(x => {
+      if (x.tipo === "cap") return `<tr class="${nivelCap(x.codigo) <= 1 ? "cap1" : "cap2"}"><td colspan="2">${esc(x.ref)} ${esc(x.descripcion)}</td><td class="num">${fmt(sP[x.codigo])}</td><td class="num">${sM[x.codigo] ? fmt(sM[x.codigo]) : ""}</td></tr>`;
+      const p = x, i = idx[p.codigo], m = M[p.codigo];
       const dif = m.n && p.cantPres ? (m.cantidad - p.cantPres) / p.cantPres * 100 : null;
-      const difTxt = dif === null ? "" : `<br><span class="${Math.abs(dif) > 10 ? "bad" : "ok"}">${dif > 0 ? "+" : ""}${fmt(dif, 1)} %</span>`;
-      const aviso = m.faltan ? `<br><span class="bad">${m.faltan} sin cantidad</span>` : "";
-      const herr = m.n || partidaActiva === p.codigo ? `<div class="herr">
-          <select data-cant="${i}" class="mini" title="Con qué cantidad se mide">${opcionesPara(p)}</select>
+      const herr = m.n || partidaActiva === p.codigo ? `<div class="herr"><select data-cant="${i}" class="mini">${opcionesPara(p)}</select>
           ${p.cantidad === CONTAR ? "" : `× <input data-factor="${i}" class="mini" size="5" value="${p.factor ?? 1}" title="Factor: mm→m 0.001 · mm²→m² 0.000001 · mm³→m³ 0.000000001">`}
           ${m.n ? `<button class="mini sec" data-acc="ver" data-i="${i}">Ver</button><button class="mini sec" data-acc="aislar" data-i="${i}">Aislar</button>` : ""}</div>` : "";
-      return `<tr class="partida ${partidaActiva === p.codigo ? "activa" : ""}" data-cod="${esc(p.codigo)}">
+      return `<tr class="clic ${partidaActiva === p.codigo ? "activa" : ""}" data-cod="${esc(p.codigo)}">
         <td><span class="sw" style="background:${m.n ? PALETA[i % PALETA.length] : "transparent"}"></span><b>${esc(p.codigo)}</b> <span class="muted">${esc(p.ref)}</span><br>${esc(p.descripcion)}${herr}</td>
-        <td class="num">${esc(p.unidad)}<br>P.U. ${fmt(p.precio)}</td>
-        <td class="num">${fmt(p.cantPres, 3)}<br>${fmt(m.importePres)}</td>
-        <td class="num">${m.n ? `${fmt(m.cantidad, 3)}<br>${fmt(m.importe)}<br><span class="muted">${m.n} el.</span>${difTxt}${aviso}` : '<span class="muted">—</span>'}</td></tr>`;
+        <td class="num">${esc(p.unidad)}<br>P.U. ${fmt(p.precio)}</td><td class="num">${fmt(p.cantPres, 3)}<br>${fmt(m.importePres)}</td>
+        <td class="num">${m.n ? `${fmt(m.cantidad, 3)}<br>${fmt(m.importe)}<br><span class="muted">${m.n} el.</span>${dif === null ? "" : `<br><span class="${Math.abs(dif) > 10 ? "bad" : "ok"}">${dif > 0 ? "+" : ""}${fmt(dif, 1)} %</span>`}${m.faltan ? `<br><span class="bad">${m.faltan} sin cantidad</span>` : ""}` : '<span class="muted">—</span>'}</td></tr>`;
     }).join("");
-    $("tablaPartidas").innerHTML = `<div class="scroll" style="max-height:420px"><table>
-      <tr><th>Partida</th><th class="num">Ud</th><th class="num">Presupuesto</th><th class="num">Modelo</th></tr>${html}
-      <tr class="total"><td colspan="2">Total</td><td class="num">${fmt(totPres)}</td><td class="num">${fmt(totModelo)}</td></tr></table></div>` +
-      (orden.length > 600 ? `<p class="muted">Mostrando 600 filas; usa el filtro.</p>` : "");
+    $("tablaPartidas").innerHTML = `<div class="scroll" style="max-height:420px"><table><tr><th>Partida</th><th class="num">Ud</th><th class="num">Presupuesto</th><th class="num">Modelo</th></tr>${html}
+      <tr class="total"><td colspan="2">Total</td><td class="num">${fmt(totPres)}</td><td class="num">${fmt(totModelo)}</td></tr></table></div>` + (filas.length > 600 ? `<p class="muted">Mostrando 600 filas; usa el filtro.</p>` : "");
+  }
+  $("filtro").oninput = pintarPartidas; $("soloAsignadas").onchange = pintarPartidas;
+
+  function pintarCubicacion() {
+    const cs = datos.cubicaciones;
+    if (!cubNum(cubVista)) cubVista = cs.at(-1)?.num || null;
+    $("cubSel").innerHTML = cs.length ? cs.map(c => `<option value="${c.num}" ${c.num === cubVista ? "selected" : ""}>Cubicación ${c.num} · corte ${fechaTxt(c.fecha)} · ${c.cerrada ? "cerrada" : "abierta"}</option>`).join("") : "<option>Sin cubicaciones</option>";
+    const c = cubNum(cubVista);
+    $("btnCerrarCub").textContent = c?.cerrada ? "Reabrir" : "Cerrar"; $("btnCerrarCub").disabled = !c;
+    if (c) $("cubFecha").value = c.fecha;
+    $("cubAviso").innerHTML = !datos.partidas.length ? '<span class="bad">Carga primero el presupuesto.</span>' : !c ? "Crea la primera cubicación con su fecha de corte." :
+      c.cerrada ? `<span class="warn">La cubicación ${c.num} está cerrada: solo consulta.</span>` : `<span class="ok">Cubicación ${c.num} abierta: los avances se registran aquí.</span>`;
+    const deshab = !cubAbierta(); [...$$(".btnPct"), $("btnPctAplicar"), $("btnCantManual")].forEach(b => b.disabled = deshab);
+    if (!c) { $("cubKpis").innerHTML = ""; $("tablaCub").innerHTML = ""; $("cubRegistros").innerHTML = ""; return; }
+
+    const O = cubicadoOrigen(c.num), A = cubicadoOrigen(c.num - 1);
+    let totPres = 0, impO = 0, impA = 0;
+    const R = {};
+    for (const p of datos.partidas) {
+      const o = O[p.codigo]?.total || 0, a = A[p.codigo]?.total || 0;
+      const r = { o, a, per: o - a, pct: p.cantPres ? o / p.cantPres * 100 : null, impO: redondear(o * p.precio), impA: redondear(a * p.precio) };
+      r.impPer = redondear(r.impO - r.impA); R[p.codigo] = r;
+      totPres += redondear(p.cantPres * p.precio); impO += r.impO; impA += r.impA;
+    }
+    $("cubKpis").innerHTML = `<div class="kpi"><div><small>Importe del período</small><b>${fmt(impO - impA)}</b></div><div><small>Importe a origen</small><b>${fmt(impO)}</b></div>
+      <div><small>Avance de la obra</small><b>${fmt(totPres ? impO / totPres * 100 : 0, 1)} %</b><div class="barra"><i style="width:${Math.min(100, totPres ? impO / totPres * 100 : 0)}%"></i></div></div></div>`;
+    const f = norm($("cubFiltro").value), todas = $("cubTodas").checked;
+    const visibles = datos.partidas.filter(p => (todas || R[p.codigo].o || R[p.codigo].a || elementosDe(p.codigo).length) && (!f || norm(p.codigo + " " + p.ref + " " + p.descripcion).includes(f)));
+    const sO = sumaPorCapitulo(p => R[p.codigo].impO), sPer = sumaPorCapitulo(p => R[p.codigo].impPer);
+    const filas = arbol(visibles);
+    const html = filas.slice(0, 600).map(x => {
+      if (x.tipo === "cap") return `<tr class="${nivelCap(x.codigo) <= 1 ? "cap1" : "cap2"}"><td colspan="2">${esc(x.ref)} ${esc(x.descripcion)}</td><td class="num">${sPer[x.codigo] ? fmt(sPer[x.codigo]) : ""}</td><td class="num">${sO[x.codigo] ? fmt(sO[x.codigo]) : ""}</td></tr>`;
+      const p = x, r = R[p.codigo], pct = r.pct;
+      const exceso = pct !== null && pct > 100.0001;
+      return `<tr class="clic ${partidaActiva === p.codigo ? "activa" : ""}" data-cod="${esc(p.codigo)}"><td><b>${esc(p.codigo)}</b> <span class="muted">${esc(p.ref)}</span><br>${esc(p.descripcion)}
+          ${pct !== null ? `<div class="barra"><i style="width:${Math.min(100, pct)}%;background:${exceso ? "var(--bad)" : pct >= 99.999 ? "var(--ok)" : "#f59e0b"}"></i></div>` : ""}</td>
+        <td class="num">${esc(p.unidad)}<br>Pres. ${fmt(p.cantPres, 3)}</td>
+        <td class="num">${r.per ? fmt(r.per, 3) : '<span class="muted">0</span>'}<br><span class="muted">ant. ${fmt(r.a, 3)}</span></td>
+        <td class="num"><b>${fmt(r.o, 3)}</b><br><span class="${exceso ? "bad" : ""}">${pct === null ? "—" : fmt(pct, 1) + " %"}</span>${exceso ? '<br><span class="bad">excede</span>' : ""}</td></tr>`;
+    }).join("");
+    $("tablaCub").innerHTML = `<div class="scroll" style="max-height:420px"><table><tr><th>Partida</th><th class="num">Ud</th><th class="num">Período</th><th class="num">A origen</th></tr>${html || '<tr><td colspan="4" class="muted">Sin partidas que mostrar. Marca «Mostrar todas» o liga elementos en Presupuesto.</td></tr>'}
+      <tr class="total"><td colspan="2">Total (importe)</td><td class="num">${fmt(impO - impA)}</td><td class="num">${fmt(impO)}</td></tr></table></div>` + (filas.length > 600 ? `<p class="muted">Mostrando 600 filas; usa el filtro.</p>` : "");
+    const regs = datos.registros.filter(r => r.cub === c.num);
+    const agrup = {}; regs.filter(r => r.tipo === "elem").forEach(r => { const k = r.partida + "|" + r.valor; (agrup[k] ||= { partida: r.partida, valor: r.valor, n: 0 }).n++; });
+    $("cubRegistros").innerHTML = (regs.length ? `<table>${Object.values(agrup).map(g => `<tr><td>${esc(g.partida)}</td><td>${g.n} elementos al ${fmt(g.valor, 0)} %</td><td></td></tr>`).join("")}
+      ${regs.filter(r => r.tipo === "manual").map(r => `<tr><td>${esc(r.partida)}</td><td>Manual: ${fmt(r.valor, 3)} ${esc(partidaPor(r.partida)?.unidad)}</td><td>${c.cerrada ? "" : `<button class="mini sec" data-t="${r.t}">×</button>`}</td></tr>`).join("")}</table>` : '<p class="muted">Sin registros todavía.</p>');
+  }
+  $("cubFiltro").oninput = pintarCubicacion; $("cubTodas").onchange = pintarCubicacion;
+
+  function pintarCronograma() {
+    const ts = tareas();
+    $("croTitulo").textContent = datos.cronograma ? datos.cronograma.nombre : "Cronograma";
+    if (!ts.length) { $("tablaCro").innerHTML = '<p class="muted">Carga el cronograma exportado de MS Project.</p>'; $("croAviso").textContent = ""; return; }
+    const r = rangoCro(), fecha = $("croFecha").value || r.ini, cub = cubHastaFecha(fecha);
+    const nSin = ts.filter(sinProgramar).length;
+    $("croAviso").innerHTML = `${ts.filter(t => !t.resumen).length} tareas · ${fechaTxt(r.ini)} → ${fechaTxt(r.fin)}` + (nSin ? `<br><span class="warn">⚠ ${nSin} tareas parecen sin programar (fecha de inicio de obra, 0 días).</span>` : "");
+    $("croLeyenda").innerHTML = $("croModo").value === "plan"
+      ? `<span><i class="sw" style="background:${C.hecho}"></i>Terminado</span><span><i class="sw" style="background:${C.parcial}"></i>En curso</span><span><i class="sw" style="background:${C.nada}"></i>No iniciado</span>`
+      : `<span><i class="sw" style="background:${C.hecho}"></i>Cubicado 100 %</span><span><i class="sw" style="background:${C.atraso}"></i>Atrasado</span><span><i class="sw" style="background:${C.parcial}"></i>En curso</span><span><i class="sw" style="background:${C.adelanto}"></i>Adelantado</span><span><i class="sw" style="background:${C.nada}"></i>No iniciado</span>` + `<br>Cubicación usada: ${cub ? cub : "ninguna antes de esta fecha"}`;
+    const t = tareaPor(tareaActiva);
+    $("btnTareaAsignar").disabled = $("btnTareaQuitar").disabled = !t || t.resumen;
+    $("tareaActivaTxt").innerHTML = t ? `Tarea elegida: <b>${esc(t.nombre)}</b> (${fechaTxt(t.inicio)} → ${fechaTxt(t.fin)})${t.resumen ? ' <span class="warn">— es una tarea resumen; elige una tarea concreta.</span>' : ""}` : "Haz clic en una tarea para elegirla.";
+    const f = norm($("croFiltro").value), solo = $("croSoloLigadas").checked;
+    const html = ts.map(x => {
+      const els = x.resumen ? [] : elementosDeTarea(x.id);
+      if (!x.resumen && ((solo && !els.length) || (f && !norm(x.nombre).includes(f)))) return "";
+      if (x.resumen && (solo || f)) return `<tr class="cap2"><td colspan="3" style="padding-left:${(x.nivel - 1) * 8 + 4}px">${esc(x.nombre)}</td></tr>`;
+      if (x.resumen) return `<tr class="${x.nivel <= 3 ? "cap1" : "cap2"}"><td colspan="2" style="padding-left:${(x.nivel - 1) * 8 + 4}px">${esc(x.nombre)}</td><td class="num">${fechaTxt(x.inicio)}<br>${fechaTxt(x.fin)}</td></tr>`;
+      const plan = planPct(x, fecha);
+      const real = els.length ? els.reduce((a, e) => a + (pctElemento(e, cub) ?? 0), 0) / els.length : null;
+      return `<tr class="clic ${tareaActiva === x.id ? "activa" : ""}" data-tarea="${x.id}"><td style="padding-left:${(x.nivel - 1) * 8 + 4}px">${esc(x.nombre)}${sinProgramar(x) ? ' <span class="warn" title="Parece sin programar">⚠</span>' : ""}
+          ${els.length ? `<br><span class="muted">${els.length} el.</span> <button class="mini sec" data-ver="${x.id}">Ver</button>` : ""}</td>
+        <td class="num">Plan ${fmt(plan, 0)} %${real === null ? "" : `<br><span class="${real + 0.001 < plan ? "bad" : "ok"}">Real ${fmt(real, 0)} %</span>`}</td>
+        <td class="num">${fechaTxt(x.inicio)}<br>${fechaTxt(x.fin)}</td></tr>`;
+    }).join("");
+    $("tablaCro").innerHTML = `<div class="scroll" style="max-height:420px"><table><tr><th>Tarea</th><th class="num">Avance a ${fechaTxt(fecha)}</th><th class="num">Inicio / fin</th></tr>${html}</table></div>`;
   }
 
-  $("filtro").oninput = pintarPartidas;
-  $("soloAsignadas").onchange = pintarPartidas;
-
-  // ---------- Acciones ----------
+  // ---------- Acciones de presupuesto ----------
   $("btnAsignar").onclick = () => {
     const p = partidaDesdeTexto($("buscaPartida").value);
-    if (!p) return alert("Elige una partida del presupuesto (escribe su código o parte del texto).");
+    if (!p) return alert("Elige una partida del presupuesto (código o parte del texto).);
     if (!seleccion.length) return alert("Selecciona elementos en el visor.");
-    for (const e of seleccion) {
-      const reg = datos.elementos[e.guid] ||= { modelId: e.modelId, guid: e.guid, clase: e.clase, nombre: e.nombre, cantidades: e.cantidades, partidas: [] };
-      reg.cantidades = e.cantidades;
-      if (!reg.partidas.includes(p.codigo)) reg.partidas.push(p.codigo);
-    }
-    partidaActiva = p.codigo;
-    guardar(); pintarTodo();
-    estado(`${seleccion.length} elementos → ${p.codigo}`);
+    for (const s of seleccion) { const e = registrar(s); if (!e.partidas.includes(p.codigo)) e.partidas.push(p.codigo); }
+    partidaActiva = p.codigo; guardar(); pintarTodo(); estado(`${seleccion.length} elementos → ${p.codigo}`);
   };
-
   $("btnQuitar").onclick = () => {
-    const p = partidaDesdeTexto($("buscaPartida").value);
-    if (!p) return alert("Elige la partida que quieres quitar.");
+    const p = partidaDesdeTexto($("buscaPartida").value); if (!p) return alert("Elige la partida que quieres quitar.");
+    if (datos.registros.some(r => r.partida === p.codigo && r.tipo === "elem" && seleccion.some(s => s.guid === r.guid)) && !confirm("Algunos de estos elementos ya tienen avance cubicado en esta partida. Si los quitas, ese avance deja de contar. ¿Continuar?")) return;
     let n = 0;
-    for (const e of seleccion) {
-      const reg = datos.elementos[e.guid];
-      if (reg && reg.partidas.includes(p.codigo)) { reg.partidas = reg.partidas.filter(c => c !== p.codigo); n++; if (!reg.partidas.length) delete datos.elementos[e.guid]; }
-    }
-    guardar(); pintarTodo();
-    estado(`${n} elementos quitados de ${p.codigo}`);
+    for (const s of seleccion) { const e = datos.elementos[s.guid]; if (e?.partidas.includes(p.codigo)) { e.partidas = e.partidas.filter(c => c !== p.codigo); limpiarElemento(e.guid); n++; } }
+    guardar(); pintarTodo(); estado(`${n} elementos quitados de ${p.codigo}`);
   };
-
   $("tablaPartidas").addEventListener("change", ev => {
     const { cant, factor } = ev.target.dataset;
-    if (cant !== undefined) datos.partidas[cant].cantidad = ev.target.value;
-    else if (factor !== undefined) datos.partidas[factor].factor = leerFactor(ev.target.value);
-    else return;
+    if (cant !== undefined) datos.partidas[cant].cantidad = ev.target.value; else if (factor !== undefined) datos.partidas[factor].factor = leerFactor(ev.target.value); else return;
     guardar(); pintarPartidas();
   });
-
+  function elegirFila(ev) {
+    if (ev.target.closest("select, input, button")) return false;
+    const fila = ev.target.closest("tr[data-cod]"); if (!fila) return false;
+    const p = partidaPor(fila.dataset.cod); partidaActiva = p.codigo; $("buscaPartida").value = etiqueta(p); $("cubUd").textContent = p.unidad;
+    pintarTodo(); return true;
+  }
+  $("tablaCub").addEventListener("click", elegirFila);
   $("tablaPartidas").addEventListener("click", async ev => {
-    if (ev.target.closest("select, input")) return;
-    const b = ev.target.closest("button");
-    if (!b) {
-      const fila = ev.target.closest("tr.partida");
-      if (fila) {
-        const p = datos.partidas.find(x => x.codigo === fila.dataset.cod);
-        partidaActiva = p.codigo; $("buscaPartida").value = etiqueta(p); pintarPartidas();
-      }
-      return;
-    }
-    if (!API) return;
-    const p = datos.partidas[b.dataset.i];
-    const els = elementosDe(p.codigo);
-    if (!els.length) return estado("Esa partida no tiene elementos");
-    const selector = await selectorDe(els);
+    if (elegirFila(ev)) return;
+    const b = ev.target.closest("button[data-acc]"); if (!b || !API) return;
+    const p = datos.partidas[b.dataset.i], els = elementosDe(p.codigo); if (!els.length) return;
+    const s = await selectorDe(els);
     try {
-      if (b.dataset.acc === "ver") {
-        await API.viewer.setSelection(selector, "set");
-        await API.viewer.setCamera(selector, { animationTime: 400 });
-      } else {
-        await API.viewer.isolateEntities(selector.modelObjectIds.map(m => ({ modelId: m.modelId, entityIds: m.objectRuntimeIds })));
-      }
+      if (b.dataset.acc === "ver") { await API.viewer.setSelection(s, "set"); await API.viewer.setCamera(s, { animationTime: 400 }); }
+      else await API.viewer.isolateEntities(s.modelObjectIds.map(m => ({ modelId: m.modelId, entityIds: m.objectRuntimeIds })));
     } catch (e) { estado("El visor no aceptó la orden"); }
   });
-
   $("btnColorTodo").onclick = async () => {
-    if (!API) return;
-    try { await API.viewer.setObjectState(undefined, { color: "reset" }); } catch (e) {}
-    for (const [i, p] of datos.partidas.entries()) {
-      const els = elementosDe(p.codigo);
-      if (!els.length) continue;
-      try { await API.viewer.setObjectState(await selectorDe(els), { color: PALETA[i % PALETA.length] }); } catch (e) {}
-    }
+    await pintarGrupos(datos.partidas.map((p, i) => ({ elems: elementosDe(p.codigo), color: PALETA[i % PALETA.length] })));
     estado("Coloreado por partida");
   };
-
   $("btnSinPartida").onclick = async () => {
     if (!API) return;
-    try {
-      await API.viewer.setObjectState(undefined, { color: "#d0d5dd" });
-      const asignados = Object.values(datos.elementos);
-      if (asignados.length) await API.viewer.setObjectState(await selectorDe(asignados), { color: "#3cb44b" });
-      estado("Verde: con partida · Gris: sin partida");
-    } catch (e) { estado("El visor no aceptó la orden"); }
-  };
-
-  $("btnReset").onclick = async () => {
-    if (!API) return;
-    try { await API.viewer.setObjectState(undefined, { color: "reset", visible: "reset" }); } catch (e) { try { await API.viewer.reset(); } catch (e2) {} }
-    estado("Vista restablecida");
+    try { await API.viewer.setObjectState(undefined, { color: "#d0d5dd" }); const a = Object.values(datos.elementos).filter(e => e.partidas.length); if (a.length) await API.viewer.setObjectState(await selectorDe(a), { color: "#3cb44b" }); estado("Verde: con partida · Gris: sin partida"); }
+    catch (e) { estado("El visor no aceptó la orden"); }
   };
 
   // ---------- Exportar / importar ----------
-  function descargar(nombre, contenido, tipo) {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([contenido], { type: tipo }));
-    a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
-  }
+  function descargar(nombre, contenido, tipo) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([contenido], { type: tipo })); a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); }
   const csvCelda = v => { const s = String(v ?? ""); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const csv = filas => "﻿" + filas.map(f => f.map(csvCelda).join(";")).join("\r\n");
+  const obraCod = () => datos.obra?.codigo || "obra";
 
   $("btnCSV").onclick = () => {
     const cap = Object.fromEntries(datos.capitulos.map(c => [c.codigo, c]));
-    const filas = [["Obra", "Partida", "Codigo", "Capitulo", "Resumen", "Ud", "PU", "CantidadPresupuesto", "CantidadModeloUsada", "Factor", "GlobalId", "ClaseIFC", "NombreElemento", "ModeloId", "CantidadElemento", "ImporteElemento"]];
-    for (const p of datos.partidas) {
-      for (const e of elementosDe(p.codigo)) {
-        const k = claveDe(p, e);
-        const f = k === CONTAR ? 1 : (p.factor ?? 1);
-        const q = k === CONTAR ? 1 : (k && k in e.cantidades ? e.cantidades[k] * f : "");
-        filas.push([datos.obra?.codigo || "", p.codigo, p.ref, cap[p.padre]?.descripcion || "", p.descripcion, p.unidad, p.precio, p.cantPres,
-          k === CONTAR ? "Unidades" : (k || ""), f, e.guid, e.clase, e.nombre, e.modelId, q, q === "" ? "" : q * p.precio]);
-      }
+    const filas = [["Obra", "Partida", "Codigo", "Capitulo", "Resumen", "Ud", "PU", "CantidadPresupuesto", "CantidadModeloUsada", "Factor", "GlobalId", "ClaseIFC", "NombreElemento", "ModeloId", "CantidadElemento", "ImporteElemento", "Tareas"]];
+    for (const p of datos.partidas) for (const e of elementosDe(p.codigo)) {
+      const k = claveDe(p, e), q = cantElem(p, e);
+      filas.push([obraCod(), p.codigo, p.ref, cap[p.padre]?.descripcion || "", p.descripcion, p.unidad, p.precio, p.cantPres, k === CONTAR ? "Unidades" : (k || ""), k === CONTAR ? 1 : (p.factor ?? 1), e.guid, e.clase, e.nombre, e.modelId, q ?? "", q === null ? "" : redondear(q * p.precio), (e.tareas || []).map(i => tareaPor(i)?.nombre || i).join(" | ")]);
     }
-    descargar(`partidas-elementos-${datos.obra?.codigo || "obra"}.csv`, "﻿" + filas.map(f => f.map(csvCelda).join(";")).join("\r\n"), "text/csv;charset=utf-8");
+    descargar(`vinculos-${obraCod()}.csv`, csv(filas), "text/csv;charset=utf-8");
   };
-
-  $("btnJSON").onclick = () => descargar(`partidas-bim-respaldo-${datos.obra?.codigo || "obra"}.json`, JSON.stringify(datos, null, 1), "application/json");
-
+  $("btnCubCSV").onclick = () => {
+    const c = cubNum(cubVista); if (!c) return;
+    const O = cubicadoOrigen(c.num), A = cubicadoOrigen(c.num - 1), cap = Object.fromEntries(datos.capitulos.map(x => [x.codigo, x]));
+    const filas = [["Obra", "Cubicacion", "FechaCorte", "Partida", "Codigo", "Capitulo", "Resumen", "Ud", "PU", "CantidadPresupuesto", "CantidadAnterior", "CantidadPeriodo", "CantidadOrigen", "PorcentajeAvance", "ImportePeriodo", "ImporteOrigen", "DelModelo", "Manual"]];
+    for (const p of datos.partidas) {
+      const o = O[p.codigo]?.total || 0, a = A[p.codigo]?.total || 0; if (!o && !a) continue;
+      filas.push([obraCod(), c.num, c.fecha, p.codigo, p.ref, cap[p.padre]?.descripcion || "", p.descripcion, p.unidad, p.precio, p.cantPres, +a.toFixed(4), +(o - a).toFixed(4), +o.toFixed(4), p.cantPres ? +(o / p.cantPres * 100).toFixed(2) : "", redondear((o - a) * p.precio), redondear(o * p.precio), +(O[p.codigo]?.modelo || 0).toFixed(4), +(O[p.codigo]?.manual || 0).toFixed(4)]);
+    }
+    descargar(`cubicacion-${c.num}-${obraCod()}.csv`, csv(filas), "text/csv;charset=utf-8");
+  };
+  $("btnJSON").onclick = () => descargar(`partidas-bim-respaldo-${obraCod()}-${hoyISO()}.json`, JSON.stringify(datos, null, 1), "application/json");
   $("fileJSON").onchange = async ev => {
     const f = ev.target.files[0]; if (!f) return;
     try {
-      const d = JSON.parse(await f.text());
-      if (!Array.isArray(d.partidas) || typeof d.elementos !== "object") throw 0;
+      const d = JSON.parse(await f.text()); if (!Array.isArray(d.partidas) || typeof d.elementos !== "object") throw 0;
       if (!confirm("Esto sustituye los datos actuales por los del respaldo. ¿Continuar?")) return;
-      datos = Object.assign({ obra: null, capitulos: [], partidas: [], elementos: {} }, d);
-      guardar(); pintarTodo(); estado("Respaldo cargado");
+      datos = Object.assign(VACIO(), d); Object.values(datos.elementos).forEach(e => e.tareas ||= []);
+      guardar(); pintarTodo(); ajustarSlider(); estado("Respaldo cargado");
     } catch (e) { alert("El archivo no es un respaldo válido."); }
     ev.target.value = "";
   };
 
+  ajustarSlider();
+  pintarTodo();
   leerSeleccion();
 })();
 </script>
